@@ -1,13 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Main</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Main Page</h1>
-        <p>Welcome to the main page.</p>
+    <!-- Video Background -->
+    <video autoplay muted loop id="background-video" class="video-background">
+        <source src="static/lofi_13.mp4" type="video/mp4">
+    </video>
+    
+    <!-- Overlay to darken video -->
+    <div class="video-overlay"></div>
+    
+    <!-- Main Content -->
+    <div class="home-container">
+        <a href="/active" class="glass-button">
+            <span>Enter</span>
+        </a>
     </div>
 </body>
 </html>

@@ -5,15 +5,166 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: none;
 }
 
+/* Custom Cursor Trail Canvas */
+#cursor-trail {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+/* Video Background */
+.video-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+}
+
+.video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: -1;
+}
+
+/* Home Container */
+.home-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Glass Button - Liquid Glass Glassmorphism */
+.glass-button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 18px 48px;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    
+    /* Liquid Glass Base */
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50px;
+    
+    /* Premium Backdrop Filters */
+    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    
+    /* Multi-layer Shadow for Depth */
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+    
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    min-width: 150px;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+    will-change: transform, box-shadow, background;
+}
+
+/* Hover State - Enhanced Liquid Glass */
+.glass-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
+    
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.12),
+        0 12px 32px rgba(0, 0, 0, 0.16),
+        0 0px 24px rgba(255, 255, 255, 0.1),
+        inset 0 1px 3px rgba(255, 255, 255, 0.4),
+        inset 0 -1px 3px rgba(0, 0, 0, 0.15);
+    
+    transform: translateY(-3px);
+}
+
+/* Active State */
+.glass-button:active {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        0 6px 16px rgba(0, 0, 0, 0.14),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Focus State for Accessibility */
+.glass-button:focus {
+    outline: none;
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        0 0 0 3px rgba(255, 255, 255, 0.2),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.glass-button span {
+    display: block;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
+
+.glass-button:hover span {
+    transform: scale(0.98);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .glass-button {
+        padding: 15px 40px;
+        font-size: 16px;
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .glass-button {
+        padding: 12px 32px;
+        font-size: 14px;
+        min-width: 100px;
+    }
+}
+
+/* Additional styles for other pages */
 nav {
     background-color: #333;
     padding: 1rem;
     position: sticky;
     top: 0;
+    z-index: 100;
 }
 
 nav ul {
@@ -51,3 +202,230 @@ p {
     color: #666;
     line-height: 1.6;
 }
+
+/* ========================================
+   ACTIVE PAGE - TIMER UI STYLES
+   ======================================== */
+
+/* Timer UI Wrapper - Layout Container */
+.timer-ui-wrapper {
+    position: fixed;
+    top: 40px;
+    left: 40px;
+    display: flex;
+    gap: 12px;
+    z-index: 10;
+}
+
+/* Timer Display Box - Liquid Glass */
+.timer-display-box {
+    width: clamp(250px, 20vw, 380px);
+    height: 120px;
+    
+    /* Liquid Glass Base */
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    
+    /* Premium Backdrop Filters */
+    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    
+    /* Multi-layer Shadow */
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Timer Display Text */
+.timer-display {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.08em;
+    font-family: 'Courier New', monospace;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* Timer Buttons Stack - Vertical Container */
+.timer-buttons-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 120px;
+}
+
+/* Timer Button - Rectangle Style */
+.timer-button {
+    width: 70px;
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    
+    /* Liquid Glass Base */
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.2px solid rgba(255, 255, 255, 0.2);
+    
+    /* Premium Backdrop Filters */
+    backdrop-filter: blur(10px) saturate(140%) contrast(1.05);
+    -webkit-backdrop-filter: blur(10px) saturate(140%) contrast(1.05);
+    
+    /* Shadow for Depth */
+    box-shadow: 
+        0 2px 6px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        inset 0 1px 2px rgba(255, 255, 255, 0.25),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.15);
+    
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Button Icon */
+.button-icon {
+    font-size: 1.6rem;
+    color: rgba(255, 255, 255, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Timer Button Hover State */
+.timer-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(14px) saturate(160%) contrast(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(160%) contrast(1.1);
+    
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        0 6px 16px rgba(0, 0, 0, 0.12),
+        0 0 12px rgba(255, 255, 255, 0.08),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+    
+    transform: scale(1.05);
+}
+
+.timer-button:hover .button-icon {
+    transform: scale(1.15);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Timer Button Active State */
+.timer-button:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 
+        0 1px 4px rgba(0, 0, 0, 0.1),
+        0 3px 8px rgba(0, 0, 0, 0.12),
+        inset 0 1px 2px rgba(255, 255, 255, 0.2),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Pause Button - Running State (Green) */
+.pause-button.paused {
+    background: rgba(76, 175, 80, 0.1);
+    border-color: rgba(76, 175, 80, 0.4);
+}
+
+.pause-button.paused:hover {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: rgba(76, 175, 80, 0.6);
+}
+
+/* Mobile Responsive */
+@media (max-width: 1200px) {
+    .timer-display-box {
+        width: clamp(220px, 22vw, 350px);
+        height: 110px;
+    }
+    
+    .timer-button {
+        width: 65px;
+    }
+}
+
+@media (max-width: 768px) {
+    .timer-ui-wrapper {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .timer-display-box {
+        width: clamp(200px, 70vw, 320px);
+        height: 90px;
+        padding: 16px;
+    }
+    
+    .timer-display {
+        font-size: clamp(1.5rem, 5vw, 2.2rem);
+    }
+    
+    .timer-buttons-stack {
+        flex-direction: row;
+        height: auto;
+        gap: 10px;
+    }
+    
+    .timer-button {
+        width: auto;
+        flex: 1;
+        height: 50px;
+    }
+    
+    .button-icon {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .timer-ui-wrapper {
+        top: 20px;
+        left: 20px;
+        gap: 8px;
+    }
+    
+    .timer-display-box {
+        width: min(85vw, 280px);
+        height: 80px;
+        padding: 14px;
+    }
+    
+    .timer-display {
+        font-size: clamp(1.2rem, 5.5vw, 1.8rem);
+        letter-spacing: 0.05em;
+    }
+    
+    .timer-buttons-stack {
+        flex-direction: row;
+        height: 80px;
+        gap: 8px;
+    }
+    
+    .timer-button {
+        width: auto;
+        flex: 1;
+        height: 100%;
+        border-radius: 10px;
+    }
+    
+    .button-icon {
+        font-size: 1.1rem;
+    }
