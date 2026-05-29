@@ -12,6 +12,15 @@ body {
     cursor: none;
 }
 
+button,
+a,
+button *,
+a *,
+.glass-button,
+.glass-button * {
+    cursor: none !important;
+}
+
 /* Custom Cursor Trail Canvas */
 #cursor-trail {
     position: fixed;
@@ -51,6 +60,7 @@ body {
     align-items: center;
     height: 100vh;
     width: 100vw;
+    opacity: 1;
 }
 
 /* Glass Button - Liquid Glass Glassmorphism */
@@ -82,7 +92,6 @@ body {
         inset 0 -1px 2px rgba(0, 0, 0, 0.2);
     
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
     min-width: 150px;
     letter-spacing: 1px;
     position: relative;
@@ -210,11 +219,12 @@ p {
 /* Timer UI Wrapper - Layout Container */
 .timer-ui-wrapper {
     position: fixed;
-    top: 40px;
-    left: 40px;
+    top: 20px;
+    left: 20px;
     display: flex;
     gap: 12px;
     z-index: 10;
+    opacity: 0;
 }
 
 /* Timer Display Box - Liquid Glass */
@@ -287,7 +297,6 @@ p {
         inset 0 1px 2px rgba(255, 255, 255, 0.25),
         inset 0 -1px 2px rgba(0, 0, 0, 0.15);
     
-    cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     justify-content: center;
@@ -303,6 +312,8 @@ p {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    height: 100%;
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -348,6 +359,128 @@ p {
 .pause-button.paused:hover {
     background: rgba(76, 175, 80, 0.15);
     border-color: rgba(76, 175, 80, 0.6);
+}
+
+/* Settings Menu Overlay */
+.settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Settings Menu */
+.settings-menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 20px;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 20px;
+    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+    z-index: 101;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Settings Menu Buttons */
+.settings-menu-button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 18px 48px;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border: none;
+    
+    /* Liquid Glass Base */
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50px;
+    
+    /* Premium Backdrop Filters */
+    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    
+    /* Multi-layer Shadow for Depth */
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+    
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 150px;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+    will-change: transform, box-shadow, background;
+    cursor: none !important;
+}
+
+.settings-menu-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
+    
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.12),
+        0 12px 32px rgba(0, 0, 0, 0.16),
+        0 0px 24px rgba(255, 255, 255, 0.1),
+        inset 0 1px 3px rgba(255, 255, 255, 0.4),
+        inset 0 -1px 3px rgba(0, 0, 0, 0.15);
+    
+    transform: translateY(-3px);
+}
+
+.settings-menu-button:active {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        0 6px 16px rgba(0, 0, 0, 0.14),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -45%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
 }
 
 /* Mobile Responsive */

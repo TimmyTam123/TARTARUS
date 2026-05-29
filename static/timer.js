@@ -6,6 +6,9 @@ let isRunning = false;
 
 const timerDisplay = document.getElementById('timer-display');
 const pauseBtn = document.getElementById('pause-btn');
+const settingsBtn = document.querySelector('.settings-button');
+const settingsMenu = document.getElementById('settings-menu');
+const settingsOverlay = document.getElementById('settings-overlay');
 
 /* Format seconds to HH:MM:SS */
 function formatTime(seconds) {
@@ -52,6 +55,42 @@ pauseBtn.addEventListener('click', () => {
     } else {
         startTimer();
     }
+});
+
+/* Settings menu functionality */
+function openSettingsMenu() {
+    settingsMenu.style.display = 'flex';
+    settingsOverlay.style.display = 'block';
+    
+    /* Trigger reflow to ensure display change is applied */
+    settingsMenu.offsetHeight;
+    
+    /* Fade in */
+    settingsOverlay.style.opacity = '1';
+    settingsMenu.style.opacity = '1';
+}
+
+function closeSettingsMenu() {
+    /* Fade out */
+    settingsOverlay.style.opacity = '0';
+    settingsMenu.style.opacity = '0';
+    
+    /* After fade out, hide elements */
+    setTimeout(() => {
+        settingsMenu.style.display = 'none';
+        settingsOverlay.style.display = 'none';
+    }, 300);
+}
+
+settingsBtn.addEventListener('click', openSettingsMenu);
+
+settingsOverlay.addEventListener('click', closeSettingsMenu);
+
+/* Close menu when clicking a settings button */
+document.querySelectorAll('.settings-menu-button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        closeSettingsMenu();
+    });
 });
 
 /* Auto-start timer on page load */

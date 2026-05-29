@@ -3,23 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>Tartarus</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <!-- Video Background -->
-    <video autoplay muted loop id="background-video" class="video-background">
+    <video autoplay muted loop playsinline id="background-video" class="video-background">
         <source src="static/lofi_13.mp4" type="video/mp4">
     </video>
     
     <!-- Overlay to darken video -->
     <div class="video-overlay"></div>
     
-    <!-- Main Content -->
-    <div class="home-container">
-        <a href="/active" class="glass-button">
+    <!-- Home Page Section -->
+    <div class="home-container" id="home-section">
+        <a href="#" class="glass-button" id="enter-button">
             <span>Enter</span>
         </a>
     </div>
+    
+    <!-- Timer Page Section -->
+    <div class="timer-ui-wrapper" id="timer-section" style="display: none;">
+        <!-- Timer Display Box - Liquid Glass -->
+        <div class="timer-display-box">
+            <div class="timer-display" id="timer-display">00:00:00</div>
+        </div>
+        
+        <!-- Timer Control Buttons - Vertical Stack -->
+        <div class="timer-buttons-stack">
+            <!-- Pause Button -->
+            <button class="timer-button pause-button" id="pause-btn" title="Pause">
+                <span class="button-icon">⏸</span>
+            </button>
+            
+            <!-- Settings Button -->
+            <button class="timer-button settings-button" title="Settings">
+                <span class="button-icon">⚙</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="settings-overlay" id="settings-overlay" style="display: none; opacity: 0;"></div>
+    <div class="settings-menu" id="settings-menu" style="display: none; opacity: 0;">
+        <button class="settings-menu-button">Option 1</button>
+        <button class="settings-menu-button">Option 2</button>
+        <button class="settings-menu-button">Option 3</button>
+    </div>
+    
+    <!-- Custom Cursor Trail Canvas -->
+    <canvas id="cursor-trail"></canvas>
+    
+    <script src="/static/timer.js"></script>
+    <script src="/static/cursor.js"></script>
+    
+    <script>
+        /* Page transition between home and timer */
+        document.getElementById('enter-button').addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            const homeSection = document.getElementById('home-section');
+            const timerSection = document.getElementById('timer-section');
+            
+            /* Set transition before changing opacity */
+            homeSection.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            timerSection.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            
+            /* Fade out home section */
+            homeSection.style.opacity = '0';
+            
+            /* After fade out, hide home and show timer, then fade in */
+            setTimeout(() => {
+                homeSection.style.display = 'none';
+                homeSection.style.opacity = '1'; /* Reset for potential re-use */
+                
+                timerSection.style.display = 'flex';
+                
+                /* Trigger reflow to ensure the display change is applied before opacity */
+                timerSection.offsetHeight;
+                
+                /* Fade in timer section */
+                timerSection.style.opacity = '1';
+            }, 600);
+        });
+    </script>
 </body>
 </html>

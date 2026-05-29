@@ -1,4 +1,4 @@
-/* Custom Cursor Trail Effect */
+/* Custom Cursor Trail Effect - Single Tapering Triangle */
 
 const canvas = document.getElementById('cursor-trail');
 const ctx = canvas.getContext('2d');
@@ -12,75 +12,156 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight;
 });
 
-/* Trail particles array */
-const particles = [];
-
-/* Particle class */
-class TrailParticle {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.radius = 8;
-        this.alpha = 0.8;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2;
-        this.friction = 0.92;
-    }
-    
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vx *= this.friction;
-        this.vy *= this.friction;
-        this.alpha -= 0.02;
-    }
-    
-    draw(ctx) {
-        ctx.save();
-        ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-}
+/* Trail points array with timestamps and cumulative distance */
+const trailPoints = [];
+const maxTrailDuration = 250; /* milliseconds */
+const maxTrailDistance = 200; /* pixels */
+let cursorRadius = 6; /* default cursor radius */
+let targetRadius = 6; /* target cursor radius for smooth transition */
 
 let mouseX = 0;
 let mouseY = 0;
 let lastX = 0;
 let lastY = 0;
+let cumulativeDistance = 0;
 
 /* Track mouse movement */
 document.addEventListener('mousemove', (e) => {
     mouseX = e.clientX;
     mouseY = e.clientY;
     
-    /* Create trail particles */
+    /* Add point to trail with timestamp and distance */
     const distance = Math.sqrt((mouseX - lastX) ** 2 + (mouseY - lastY) ** 2);
-    if (distance > 3) {
-        for (let i = 0; i < 2; i++) {
-            particles.push(new TrailParticle(mouseX, mouseY));
-        }
+    if (distance > 2) {
+        cumulativeDistance += distance;
+        trailPoints.push({ 
+            x: lastX || mouseX, 
+            y: lastY || mouseY, 
+            timestamp: Date.now(),
+            distanceFromStart: cumulativeDistance
+        });
         lastX = mouseX;
         lastY = mouseY;
     }
 });
 
+/* Handle button and link hovers */
+document.addEventListener('mouseover', (e) => {
+    let target = e.target;
+    let isButton = false;
+    
+    /* Check target and parents for button/link */
+    while (target && target !== document) {
+        if (target.tagName === 'BUTTON' || target.tagName === 'A' || target.classList.contains('glass-button')) {
+            isButton = true;
+            break;
+        }
+        target = target.parentElement;
+    }
+    
+    if (isButton) {
+        targetRadius = 9;
+    }
+});
+
+document.addEventListener('mouseout', (e) => {
+    let target = e.target;
+    let isButton = false;
+    
+    /* Check target and parents for button/link */
+    while (target && target !== document) {
+        if (target.tagName === 'BUTTON' || target.tagName === 'A' || target.classList.contains('glass-button')) {
+            isButton = true;
+            break;
+        }
+        target = target.parentElement;
+    }
+    
+    if (isButton) {
+        targetRadius = 6;
+    }
+});
+
 /* Animation loop */
 function animate() {
-    /* Clear canvas with slight fade instead of full clear for trail effect */
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    /* Clear canvas completely */
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    /* Update and draw particles */
-    for (let i = particles.length - 1; i >= 0; i--) {
-        particles[i].update();
-        particles[i].draw(ctx);
+    const now = Date.now();
+    
+    /* Smooth cursor radius transition */
+    cursorRadius += (targetRadius - cursorRadius) * 0.15;
+    
+    /* Remove old points based on time and distance */
+    for (let i = 0; i < trailPoints.length; i++) {
+        const point = trailPoints[i];
+        const age = now - point.timestamp;
+        const distanceFromEnd = cumulativeDistance - point.distanceFromStart;
         
-        if (particles[i].alpha <= 0) {
-            particles.splice(i, 1);
+        if (age > maxTrailDuration || distanceFromEnd > maxTrailDistance) {
+            trailPoints.splice(i, 1);
+            i--;
         }
+    }
+    
+    /* Draw single triangle trail */
+    if (trailPoints.length > 0) {
+        /* Get the tail point (oldest point) */
+        const tailPoint = trailPoints[trailPoints.length - 1];
+        
+        /* Calculate movement direction for proper triangle orientation */
+        let dirX = mouseX - tailPoint.x;
+        let dirY = mouseY - tailPoint.y;
+        const dirDist = Math.sqrt(dirX * dirX + dirY * dirY);
+        
+        if (dirDist > 0) {
+            dirX /= dirDist;
+            dirY /= dirDist;
+        } else {
+            dirX = 1;
+            dirY = 0;
+        }
+        
+        /* Perpendicular vectors for triangle sides */
+        const perpX = -dirY;
+        const perpY = dirX;
+        
+        /* Triangle has 3 points:
+           - Two at cursor (wide base)
+           - One at tail (sharp point)
+        */
+        const triangleWidth = 12; /* width at the cursor */
+        
+        const topCursorPoint = {
+            x: mouseX + perpX * (triangleWidth / 2),
+            y: mouseY + perpY * (triangleWidth / 2)
+        };
+        
+        const bottomCursorPoint = {
+            x: mouseX - perpX * (triangleWidth / 2),
+            y: mouseY - perpY * (triangleWidth / 2)
+        };
+        
+        const tailPointCoord = {
+            x: tailPoint.x,
+            y: tailPoint.y
+        };
+        
+        /* Calculate alpha based on oldest point */
+        const oldestAge = now - tailPoint.timestamp;
+        const alpha = 1 - Math.max(0, oldestAge / maxTrailDuration);
+        
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.6})`;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.4})`;
+        ctx.lineWidth = 1;
+        
+        ctx.beginPath();
+        ctx.moveTo(topCursorPoint.x, topCursorPoint.y);
+        ctx.lineTo(bottomCursorPoint.x, bottomCursorPoint.y);
+        ctx.lineTo(tailPointCoord.x, tailPointCoord.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
     }
     
     /* Draw cursor circle */
@@ -89,14 +170,14 @@ function animate() {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(mouseX, mouseY, 10, 0, Math.PI * 2);
+    ctx.arc(mouseX, mouseY, cursorRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     
     /* Draw inner dot */
     ctx.fillStyle = 'rgba(255, 255, 255, 1)';
     ctx.beginPath();
-    ctx.arc(mouseX, mouseY, 4, 0, Math.PI * 2);
+    ctx.arc(mouseX, mouseY, cursorRadius / 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     
