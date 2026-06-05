@@ -1,4 +1,4 @@
-/* Custom Cursor Trail Effect - Single Tapering Triangle */
+/* Custom Cursor Trail Effect - Smooth Ribbon Trail */
 
 const canvas = document.getElementById('cursor-trail');
 const ctx = canvas.getContext('2d');
@@ -14,7 +14,7 @@ window.addEventListener('resize', () => {
 
 /* Trail points array with timestamps and cumulative distance */
 const trailPoints = [];
-const maxTrailDuration = 250; /* milliseconds */
+const maxTrailDuration = 50; /* milliseconds */
 const maxTrailDistance = 200; /* pixels */
 let cursorRadius = 6; /* default cursor radius */
 let targetRadius = 6; /* target cursor radius for smooth transition */
@@ -104,16 +104,64 @@ function animate() {
         }
     }
     
-    /* Draw single triangle trail */
-    if (trailPoints.length > 0) {
-        /* Get the tail point (oldest point) */
-        const tailPoint = trailPoints[trailPoints.length - 1];
+    /* Draw smooth ribbon trail */
+    if (trailPoints.length > 1) {
+        const ribbonWidth = 8;
         
-        /* Calculate movement direction for proper triangle orientation */
-        let dirX = mouseX - tailPoint.x;
-        let dirY = mouseY - tailPoint.y;
+        /* Create top and bottom curves for the ribbon */
+        const topPoints = [];
+        const bottomPoints = [];
+        
+        /* Calculate perpendicular directions and create ribbon sides */
+        for (let i = 0; i < trailPoints.length; i++) {
+            const point = trailPoints[i];
+            
+            /* Get direction at this point */
+            let dirX, dirY;
+            if (i < trailPoints.length - 1) {
+                const nextPoint = trailPoints[i + 1];
+                dirX = nextPoint.x - point.x;
+                dirY = nextPoint.y - point.y;
+            } else {
+                dirX = mouseX - point.x;
+                dirY = mouseY - point.y;
+            }
+            
+            const dirDist = Math.sqrt(dirX * dirX + dirY * dirY);
+            if (dirDist > 0) {
+                dirX /= dirDist;
+                dirY /= dirDist;
+            } else {
+                dirX = 1;
+                dirY = 0;
+            }
+            
+            /* Perpendicular vector */
+            const perpX = -dirY;
+            const perpY = dirX;
+            
+            /* Calculate alpha based on age */
+            const age = now - point.timestamp;
+            const alpha = 1 - Math.max(0, age / maxTrailDuration);
+            
+            topPoints.push({
+                x: point.x + perpX * (ribbonWidth / 2),
+                y: point.y + perpY * (ribbonWidth / 2),
+                alpha: alpha
+            });
+            
+            bottomPoints.push({
+                x: point.x - perpX * (ribbonWidth / 2),
+                y: point.y - perpY * (ribbonWidth / 2),
+                alpha: alpha
+            });
+        }
+        
+        /* Add cursor position to complete the ribbon */
+        const lastPoint = trailPoints[trailPoints.length - 1];
+        let dirX = mouseX - lastPoint.x;
+        let dirY = mouseY - lastPoint.y;
         const dirDist = Math.sqrt(dirX * dirX + dirY * dirY);
-        
         if (dirDist > 0) {
             dirX /= dirDist;
             dirY /= dirDist;
@@ -121,47 +169,36 @@ function animate() {
             dirX = 1;
             dirY = 0;
         }
-        
-        /* Perpendicular vectors for triangle sides */
         const perpX = -dirY;
         const perpY = dirX;
         
-        /* Triangle has 3 points:
-           - Two at cursor (wide base)
-           - One at tail (sharp point)
-        */
-        const triangleWidth = 12; /* width at the cursor */
+        topPoints.push({
+            x: mouseX + perpX * (ribbonWidth / 2),
+            y: mouseY + perpY * (ribbonWidth / 2),
+            alpha: 1
+        });
+        bottomPoints.push({
+            x: mouseX - perpX * (ribbonWidth / 2),
+            y: mouseY - perpY * (ribbonWidth / 2),
+            alpha: 1
+        });
         
-        const topCursorPoint = {
-            x: mouseX + perpX * (triangleWidth / 2),
-            y: mouseY + perpY * (triangleWidth / 2)
-        };
-        
-        const bottomCursorPoint = {
-            x: mouseX - perpX * (triangleWidth / 2),
-            y: mouseY - perpY * (triangleWidth / 2)
-        };
-        
-        const tailPointCoord = {
-            x: tailPoint.x,
-            y: tailPoint.y
-        };
-        
-        /* Calculate alpha based on oldest point */
-        const oldestAge = now - tailPoint.timestamp;
-        const alpha = 1 - Math.max(0, oldestAge / maxTrailDuration);
-        
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.6})`;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.4})`;
-        ctx.lineWidth = 1;
-        
-        ctx.beginPath();
-        ctx.moveTo(topCursorPoint.x, topCursorPoint.y);
-        ctx.lineTo(bottomCursorPoint.x, bottomCursorPoint.y);
-        ctx.lineTo(tailPointCoord.x, tailPointCoord.y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        /* Draw ribbon with gradient */
+        for (let i = 0; i < topPoints.length - 1; i++) {
+            const alpha1 = topPoints[i].alpha;
+            const alpha2 = topPoints[i + 1].alpha;
+            
+            /* Create smooth gradient between segments */
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha1 * 0.5})`;
+            
+            ctx.beginPath();
+            ctx.moveTo(topPoints[i].x, topPoints[i].y);
+            ctx.lineTo(topPoints[i + 1].x, topPoints[i + 1].y);
+            ctx.lineTo(bottomPoints[i + 1].x, bottomPoints[i + 1].y);
+            ctx.lineTo(bottomPoints[i].x, bottomPoints[i].y);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
     
     /* Draw cursor circle */

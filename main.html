@@ -17,9 +17,79 @@
     
     <!-- Home Page Section -->
     <div class="home-container" id="home-section">
-        <a href="#" class="glass-button" id="enter-button">
+        <!-- Timer Mode Selection -->
+        <div class="timer-mode-selector" id="timer-mode-selector">
+            <button class="mode-button" data-mode="stopwatch">
+                <div class="mode-icon">⏱</div>
+                <div class="mode-label">Daily Stopwatch</div>
+            </button>
+            <button class="mode-button" data-mode="pomodoro">
+                <div class="mode-icon">🍅</div>
+                <div class="mode-label">Pomodoro</div>
+            </button>
+            <button class="mode-button" data-mode="countdown">
+                <div class="mode-icon">⏲</div>
+                <div class="mode-label">Countdown</div>
+            </button>
+        </div>
+        
+        <!-- Enter Button (shown after mode selection) -->
+        <a href="#" class="glass-button" id="enter-button" style="display: none;">
             <span>Enter</span>
         </a>
+    </div>
+    
+    <!-- Pomodoro Settings Screen -->
+    <div class="settings-overlay" id="pomodoro-settings-overlay" style="display: none; opacity: 0;"></div>
+    <div class="settings-panel" id="pomodoro-settings" style="display: none; opacity: 0;">
+        <button class="settings-panel-close" id="pomodoro-settings-close">✕</button>
+        <div class="settings-content full-width">
+            <h2>Pomodoro Settings</h2>
+            
+            <div class="setting-group">
+                <label>Study Period (minutes)</label>
+                <div class="slider-container">
+                    <input type="range" id="study-minutes" min="10" max="115" value="25" class="slider">
+                    <span class="slider-value" id="study-value">25</span>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <label>Break Length (minutes)</label>
+                <div class="slider-container">
+                    <input type="range" id="break-minutes" min="5" max="30" value="5" class="slider">
+                    <span class="slider-value" id="break-value">5</span>
+                </div>
+            </div>
+            
+            <button class="confirm-button" id="confirm-pomodoro">Start Pomodoro</button>
+        </div>
+    </div>
+    
+    <!-- Countdown Settings Screen -->
+    <div class="settings-overlay" id="countdown-settings-overlay" style="display: none; opacity: 0;"></div>
+    <div class="settings-panel" id="countdown-settings" style="display: none; opacity: 0;">
+        <button class="settings-panel-close" id="countdown-settings-close">✕</button>
+        <div class="settings-content full-width">
+            <h2>Countdown Target</h2>
+            
+            <div class="setting-group">
+                <label>Target Hours</label>
+                <input type="number" id="target-hours" min="0" max="23" value="1" class="number-input">
+            </div>
+            
+            <div class="setting-group">
+                <label>Target Minutes</label>
+                <input type="number" id="target-minutes" min="0" max="59" value="0" class="number-input">
+            </div>
+            
+            <div class="setting-group">
+                <label>Target Seconds</label>
+                <input type="number" id="target-seconds" min="0" max="59" value="0" class="number-input">
+            </div>
+            
+            <button class="confirm-button" id="confirm-countdown">Start Countdown</button>
+        </div>
     </div>
     
     <!-- Timer Page Section -->
@@ -33,7 +103,7 @@
         <div class="timer-buttons-stack">
             <!-- Pause Button -->
             <button class="timer-button pause-button" id="pause-btn" title="Pause">
-                <span class="button-icon">⏸</span>
+                <span class="button-icon">▶</span>
             </button>
             
             <!-- Settings Button -->
@@ -43,12 +113,49 @@
         </div>
     </div>
     
-    <!-- Settings Modal -->
+    <!-- Settings Modal - Original Quick Menu -->
     <div class="settings-overlay" id="settings-overlay" style="display: none; opacity: 0;"></div>
     <div class="settings-menu" id="settings-menu" style="display: none; opacity: 0;">
         <button class="settings-menu-button">Option 1</button>
         <button class="settings-menu-button">Option 2</button>
         <button class="settings-menu-button">Option 3</button>
+    </div>
+    
+    <!-- Claude-Inspired Settings Panel -->
+    <div class="settings-panel-overlay" id="settings-panel-overlay" style="display: none; opacity: 0;"></div>
+    <div class="settings-panel" id="settings-panel" style="display: none; opacity: 0;">
+        <button class="settings-panel-close" id="settings-panel-close">✕</button>
+        
+        <!-- Left Sidebar -->
+        <div class="settings-sidebar">
+            <div class="settings-sidebar-item active" data-section="general">General</div>
+            <div class="settings-sidebar-item" data-section="appearance">Appearance</div>
+            <div class="settings-sidebar-item" data-section="advanced">Advanced</div>
+        </div>
+        
+        <!-- Right Content -->
+        <div class="settings-content">
+            <div class="settings-section active" data-section="general">
+                <h2>General Settings</h2>
+                <p>Configure general options here.</p>
+            </div>
+            <div class="settings-section" data-section="appearance">
+                <h2>Appearance Settings</h2>
+                <p>Customize the look and feel.</p>
+            </div>
+            <div class="settings-section" data-section="advanced">
+                <h2>Advanced Settings</h2>
+                <p>Advanced configuration options.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fade Overlay for Option 1 Transition -->
+    <div class="fade-overlay" id="fade-overlay" style="display: none; opacity: 0;"></div>
+    
+    <!-- Example Text Container -->
+    <div class="example-text-container" id="example-text-container" style="display: none;">
+        <div class="example-text">This is an example of what could appear here.</div>
     </div>
     
     <!-- Custom Cursor Trail Canvas -->
@@ -84,6 +191,11 @@
                 
                 /* Fade in timer section */
                 timerSection.style.opacity = '1';
+                
+                /* Auto-start timer when entering */
+                if (typeof startTimer === 'function') {
+                    startTimer();
+                }
             }, 600);
         });
     </script>
