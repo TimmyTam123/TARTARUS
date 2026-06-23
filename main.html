@@ -18,25 +18,29 @@
     <!-- Home Page Section -->
     <div class="home-container" id="home-section">
         <!-- Timer Mode Selection -->
-        <div class="timer-mode-selector" id="timer-mode-selector">
-            <button class="mode-button" data-mode="stopwatch">
-                <div class="mode-icon">⏱</div>
-                <div class="mode-label">Daily Stopwatch</div>
-            </button>
-            <button class="mode-button" data-mode="pomodoro">
-                <div class="mode-icon">🍅</div>
-                <div class="mode-label">Pomodoro</div>
-            </button>
-            <button class="mode-button" data-mode="countdown">
-                <div class="mode-icon">⏲</div>
-                <div class="mode-label">Countdown</div>
-            </button>
+        <div class="home-content">
+            <div class="timer-mode-selector-wrapper">
+                <div class="timer-mode-selector" id="timer-mode-selector">
+                    <button class="mode-button-segmented" data-mode="stopwatch">
+                   
+                        <span class="mode-label">Stopwatch</span>
+                    </button>
+                    <button class="mode-button-segmented" data-mode="pomodoro">
+
+                        <span class="mode-label">Pomodoro</span>
+                    </button>
+                    <button class="mode-button-segmented" data-mode="countdown">
+          
+                        <span class="mode-label">Countdown</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Start Button (shown after mode selection) -->
+            <a href="#" class="glass-button" id="enter-button" style="display: none;">
+                <span>Start</span>
+            </a>
         </div>
-        
-        <!-- Enter Button (shown after mode selection) -->
-        <a href="#" class="glass-button" id="enter-button" style="display: none;">
-            <span>Enter</span>
-        </a>
     </div>
     
     <!-- Pomodoro Settings Screen -->
@@ -161,43 +165,8 @@
     <!-- Custom Cursor Trail Canvas -->
     <canvas id="cursor-trail"></canvas>
     
-    <script src="/static/timer.js"></script>
+    <script src="/static/timer-new.js"></script>
     <script src="/static/cursor.js"></script>
     
-    <script>
-        /* Page transition between home and timer */
-        document.getElementById('enter-button').addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            const homeSection = document.getElementById('home-section');
-            const timerSection = document.getElementById('timer-section');
-            
-            /* Set transition before changing opacity */
-            homeSection.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-            timerSection.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-            
-            /* Fade out home section */
-            homeSection.style.opacity = '0';
-            
-            /* After fade out, hide home and show timer, then fade in */
-            setTimeout(() => {
-                homeSection.style.display = 'none';
-                homeSection.style.opacity = '1'; /* Reset for potential re-use */
-                
-                timerSection.style.display = 'flex';
-                
-                /* Trigger reflow to ensure the display change is applied before opacity */
-                timerSection.offsetHeight;
-                
-                /* Fade in timer section */
-                timerSection.style.opacity = '1';
-                
-                /* Auto-start timer when entering */
-                if (typeof startTimer === 'function') {
-                    startTimer();
-                }
-            }, 600);
-        });
-    </script>
 </body>
 </html>

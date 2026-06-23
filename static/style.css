@@ -29,7 +29,7 @@ a *,
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 9999;
+    z-index: 100;
 }
 
 /* Video Background */
@@ -63,64 +63,96 @@ a *,
     opacity: 1;
 }
 
-/* Timer Mode Selector */
-.timer-mode-selector {
+/* Home Content Wrapper */
+.home-content {
     display: flex;
-    gap: 30px;
     flex-direction: column;
     align-items: center;
+    gap: 40px;
 }
 
-/* Mode Button */
-.mode-button {
+/* Timer Mode Selector Wrapper */
+.timer-mode-selector-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    width: 140px;
-    height: 140px;
-    border: none;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.06);
+    gap: 20px;
+}
+
+.selector-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.5px;
+}
+
+/* Timer Mode Selector - Segmented Group */
+.timer-mode-selector {
+    display: flex;
+    border-radius: 12px;
     border: 1.5px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
     -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    padding: 4px;
+    gap: 4px;
     box-shadow: 
         0 2px 8px rgba(0, 0, 0, 0.08),
         0 8px 24px rgba(0, 0, 0, 0.12),
         inset 0 1px 2px rgba(255, 255, 255, 0.3),
         inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Segmented Mode Button */
+.mode-button-segmented {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 24px;
+    border: 1.5px solid transparent;
+    background: transparent;
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.6);
     cursor: none !important;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    gap: 12px;
-}
-
-.mode-button:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    transform: scale(1.05);
-    box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.12),
-        0 12px 32px rgba(0, 0, 0, 0.16),
-        0 0px 24px rgba(255, 255, 255, 0.1),
-        inset 0 1px 3px rgba(255, 255, 255, 0.4),
-        inset 0 -1px 3px rgba(0, 0, 0, 0.15);
-}
-
-.mode-button:active {
-    transform: scale(0.98);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 100px;
 }
 
 .mode-icon {
-    font-size: 3rem;
+    font-size: 2rem;
+    display: block;
+    transition: transform 0.3s ease;
 }
 
 .mode-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.75);
+    font-size: 12px;
+    display: block;
+}
+
+/* Hover state */
+.mode-button-segmented:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Active state (selected) */
+.mode-button-segmented.active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.95);
+    box-shadow: 
+        inset 0 1px 2px rgba(255, 255, 255, 0.2),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.1),
+        0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.mode-button-segmented.active .mode-icon {
+    transform: scale(1.1);
 }
 
 /* Glass Button - Liquid Glass Glassmorphism */
@@ -434,6 +466,25 @@ p {
     transition: opacity 0.3s ease-in-out;
 }
 
+/* Make the start-screen setup panels sit above the home screen and cursor layer. */
+#pomodoro-settings-overlay,
+#countdown-settings-overlay {
+    z-index: 260;
+    pointer-events: auto;
+}
+
+#pomodoro-settings,
+#countdown-settings {
+    z-index: 270;
+    pointer-events: auto;
+}
+
+.settings-overlay.is-visible,
+.settings-panel.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
 /* Settings Menu */
 .settings-menu {
     position: fixed;
@@ -667,6 +718,14 @@ p {
     opacity: 0;
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    flex-direction: column;
+}
+
+/* Settings panel for full content width (no sidebar) */
+.settings-panel:has(.settings-content.full-width) {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Close Button */
@@ -790,6 +849,146 @@ p {
 .settings-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+
+/* Settings for full-width content (Pomodoro, Countdown) */
+.settings-content.full-width {
+    padding: 30px 40px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.settings-content.full-width h2 {
+    font-size: 28px;
+    margin-bottom: 30px;
+}
+
+/* Setting Group */
+.setting-group {
+    margin-bottom: 28px;
+}
+
+.setting-group label {
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+/* Slider Container */
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Range Slider */
+.slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    cursor: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    cursor: none !important;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.slider-value {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 600;
+    min-width: 40px;
+    text-align: right;
+}
+
+/* Number Input */
+.number-input {
+    width: 100px;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: none !important;
+}
+
+.number-input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Confirm Button */
+.confirm-button {
+    padding: 14px 32px;
+    margin-top: 30px;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.12),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+    cursor: none !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.confirm-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.12),
+        0 12px 32px rgba(0, 0, 0, 0.16),
+        0 0px 24px rgba(255, 255, 255, 0.08),
+        inset 0 1px 3px rgba(255, 255, 255, 0.4),
+        inset 0 -1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.confirm-button:active {
+    transform: scale(0.98);
+}
 @media (max-width: 480px) {
     .timer-ui-wrapper {
         top: 20px;
@@ -824,3 +1023,4 @@ p {
     .button-icon {
         font-size: 1.1rem;
     }
+}
