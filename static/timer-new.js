@@ -44,6 +44,8 @@ const targetMinutes = document.getElementById('target-minutes');
 const targetSecondsInput = document.getElementById('target-seconds');
 const confirmCountdown = document.getElementById('confirm-countdown');
 
+const title = document.getElementById('title');
+
 /* Format seconds to HH:MM:SS */
 function formatTime(seconds) {
     const hours = Math.floor(seconds / 3600);
@@ -296,6 +298,7 @@ function updateDisplay() {
     } else if (currentMode === 'countdown') {
         timerDisplay.textContent = formatTime(getCountdownDisplay());
     }
+    title.textContent = timerDisplay.textContent; /* Update the title with the current timer value */
 }
 
 /* Start timer */
@@ -304,7 +307,7 @@ function startTimer() {
         isRunning = true;
         startTime = Date.now();
         pauseBtn.classList.add('paused');
-        pauseBtn.querySelector('.button-icon').textContent = '▶';
+        pauseBtn.querySelector('.button-icon').textContent = '⏸';
         
         timerInterval = setInterval(() => {
             updateDisplay();
@@ -318,7 +321,7 @@ function pauseTimer() {
     if (isRunning) {
         isRunning = false;
         pauseBtn.classList.remove('paused');
-        pauseBtn.querySelector('.button-icon').textContent = '⏸';
+        pauseBtn.querySelector('.button-icon').textContent = '▶';
         pausedTime += Date.now() - startTime;
         startTime = null;
         clearInterval(timerInterval);
