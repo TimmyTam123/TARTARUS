@@ -21,9 +21,75 @@ const timerModeSelector = document.getElementById('timer-mode-selector');
 const modeButtons = document.querySelectorAll('.mode-button-segmented');
 const enterButton = document.getElementById('enter-button');
 
+function setModalVisibility(panel, overlay, visible) {
+    panel.style.display = visible ? 'flex' : 'none';
+    panel.style.visibility = visible ? 'visible' : 'hidden';
+    panel.style.pointerEvents = visible ? 'auto' : 'none';
+    panel.style.opacity = visible ? '1' : '0';
+    panel.style.zIndex = visible ? '9999' : '0';
+    panel.style.position = 'fixed';
+    panel.style.top = '50%';
+    panel.style.left = '50%';
+    panel.style.transform = 'translate(-50%, -50%)';
+
+    overlay.style.display = visible ? 'block' : 'none';
+    overlay.style.visibility = visible ? 'visible' : 'hidden';
+    overlay.style.pointerEvents = visible ? 'auto' : 'none';
+    overlay.style.opacity = visible ? '1' : '0';
+    overlay.style.zIndex = visible ? '9998' : '0';
+
+    panel.classList.toggle('is-visible', visible);
+    overlay.classList.toggle('is-visible', visible);
+}
+
 const timerDisplay = document.getElementById('timer-display');
 const pauseBtn = document.getElementById('pause-btn');
 const settingsBtn = document.querySelector('.settings-button');
+const backgroundVideo = document.getElementById('background-video');
+
+/* Settings button */
+if (settingsBtn) {
+    settingsBtn.addEventListener('click', openSettingsMenu);
+}
+
+/* Background video playback enforcement */
+function ensureBackgroundVideoPlays() {
+    if (!backgroundVideo) return;
+
+    backgroundVideo.muted = true;
+    backgroundVideo.loop = true;
+    backgroundVideo.playsInline = true;
+    backgroundVideo.setAttribute('muted', '');
+    backgroundVideo.setAttribute('playsinline', '');
+    backgroundVideo.setAttribute('autoplay', '');
+
+    const playPromise = backgroundVideo.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {
+            /* Keep retrying after user interaction or visibility change. */
+        });
+    }
+}
+
+function bindBackgroundVideoPlayback() {
+    ensureBackgroundVideoPlays();
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            ensureBackgroundVideoPlays();
+        }
+    });
+
+    window.addEventListener('focus', ensureBackgroundVideoPlays);
+    document.body.addEventListener('pointerdown', ensureBackgroundVideoPlays, { once: true });
+    document.body.addEventListener('keydown', ensureBackgroundVideoPlays, { once: true });
+
+    setInterval(() => {
+        if (backgroundVideo && backgroundVideo.paused) {
+            ensureBackgroundVideoPlays();
+        }
+    }, 5000);
+}
 
 /* Pomodoro settings */
 const pomodoroSettingsOverlay = document.getElementById('pomodoro-settings-overlay');
@@ -56,12 +122,83 @@ function formatTime(seconds) {
 }
 
 /* Mode selection handlers */
-modeButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const mode = btn.dataset.mode;
-        selectTimerMode(mode);
+function bindModeSelection() {
+    modeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.mode;
+            selectTimerMode(mode);
+        });
     });
-});
+}
+
+function bindSetupModalEvents() {
+    studyMinutesSlider.addEventListener('input', () => {
+        studyMinutes = parseInt(studyMinutesSlider.value);
+        studyValue.textContent = studyMinutes;
+    });
+
+    breakMinutesSlider.addEventListener('input', () => {
+        breakMinutes = parseInt(breakMinutesSlider.value);
+        breakValue.textContent = breakMinutes;
+    });
+
+    confirmPomodoro.addEventListener('click', () => {
+        closePomodoroSettings();
+        setTimeout(() => {
+            transitionToTimer();
+        }, 350);
+    });
+
+    pomodoroSettingsClose.addEventListener('click', () => {
+        closePomodoroSettings();
+    });
+
+    pomodoroSettingsOverlay.addEventListener('click', closePomodoroSettings);
+
+    confirmCountdown.addEventListener('click', () => {
+        const h = parseInt(targetHours.value) || 0;
+        const m = parseInt(targetMinutes.value) || 0;
+        const s = parseInt(targetSecondsInput.value) || 0;
+        targetSeconds = h * 3600 + m * 60 + s;
+        closeCountdownSettings();
+        setTimeout(() => {
+            transitionToTimer();
+        }, 350);
+    });
+
+    countdownSettingsClose.addEventListener('click', () => {
+        closeCountdownSettings();
+    });
+
+    countdownSettingsOverlay.addEventListener('click', closeCountdownSettings);
+
+    enterButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        closePomodoroSettings();
+        closeCountdownSettings();
+        transitionToTimer();
+    });
+
+    pauseBtn.addEventListener('click', () => {
+        if (isRunning) {
+            pauseTimer();
+        } else {
+            startTimer();
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        bindModeSelection();
+        bindSetupModalEvents();
+        bindBackgroundVideoPlayback();
+    });
+} else {
+    bindModeSelection();
+    bindSetupModalEvents();
+    bindBackgroundVideoPlayback();
+}
 
 function selectTimerMode(mode) {
     currentMode = mode;
@@ -88,101 +225,25 @@ function selectTimerMode(mode) {
 
 /* Pomodoro settings */
 function showPomodoroSettings() {
-    pomodoroSettings.style.display = 'flex';
-    pomodoroSettings.style.visibility = 'visible';
-    pomodoroSettings.style.pointerEvents = 'auto';
-    pomodoroSettingsOverlay.style.display = 'block';
-    pomodoroSettingsOverlay.style.visibility = 'visible';
-    pomodoroSettingsOverlay.style.pointerEvents = 'auto';
-    pomodoroSettings.classList.add('is-visible');
-    pomodoroSettingsOverlay.classList.add('is-visible');
-    /* Trigger reflow to ensure display change is applied */
+    setModalVisibility(pomodoroSettings, pomodoroSettingsOverlay, true);
     pomodoroSettings.offsetHeight;
-    pomodoroSettingsOverlay.style.opacity = '1';
-    pomodoroSettings.style.opacity = '1';
+    pomodoroSettingsOverlay.offsetHeight;
 }
 
 function closePomodoroSettings() {
-    pomodoroSettingsOverlay.style.opacity = '0';
-    pomodoroSettings.style.opacity = '0';
-    pomodoroSettings.classList.remove('is-visible');
-    pomodoroSettingsOverlay.classList.remove('is-visible');
-    setTimeout(() => {
-        pomodoroSettings.style.display = 'none';
-        pomodoroSettings.style.visibility = 'hidden';
-        pomodoroSettingsOverlay.style.display = 'none';
-        pomodoroSettingsOverlay.style.visibility = 'hidden';
-    }, 300);
+    setModalVisibility(pomodoroSettings, pomodoroSettingsOverlay, false);
 }
-
-studyMinutesSlider.addEventListener('input', () => {
-    studyMinutes = parseInt(studyMinutesSlider.value);
-    studyValue.textContent = studyMinutes;
-});
-
-breakMinutesSlider.addEventListener('input', () => {
-    breakMinutes = parseInt(breakMinutesSlider.value);
-    breakValue.textContent = breakMinutes;
-});
-
-confirmPomodoro.addEventListener('click', () => {
-    closePomodoroSettings();
-    setTimeout(() => {
-        transitionToTimer();
-    }, 350);
-});
-
-pomodoroSettingsClose.addEventListener('click', () => {
-    closePomodoroSettings();
-});
-
-pomodoroSettingsOverlay.addEventListener('click', closePomodoroSettings);
 
 /* Countdown settings */
 function showCountdownSettings() {
-    countdownSettings.style.display = 'flex';
-    countdownSettings.style.visibility = 'visible';
-    countdownSettings.style.pointerEvents = 'auto';
-    countdownSettingsOverlay.style.display = 'block';
-    countdownSettingsOverlay.style.visibility = 'visible';
-    countdownSettingsOverlay.style.pointerEvents = 'auto';
-    countdownSettings.classList.add('is-visible');
-    countdownSettingsOverlay.classList.add('is-visible');
-    /* Trigger reflow to ensure display change is applied */
+    setModalVisibility(countdownSettings, countdownSettingsOverlay, true);
     countdownSettings.offsetHeight;
-    countdownSettingsOverlay.style.opacity = '1';
-    countdownSettings.style.opacity = '1';
+    countdownSettingsOverlay.offsetHeight;
 }
 
 function closeCountdownSettings() {
-    countdownSettingsOverlay.style.opacity = '0';
-    countdownSettings.style.opacity = '0';
-    countdownSettings.classList.remove('is-visible');
-    countdownSettingsOverlay.classList.remove('is-visible');
-    setTimeout(() => {
-        countdownSettings.style.display = 'none';
-        countdownSettings.style.visibility = 'hidden';
-        countdownSettingsOverlay.style.display = 'none';
-        countdownSettingsOverlay.style.visibility = 'hidden';
-    }, 300);
+    setModalVisibility(countdownSettings, countdownSettingsOverlay, false);
 }
-
-confirmCountdown.addEventListener('click', () => {
-    const h = parseInt(targetHours.value) || 0;
-    const m = parseInt(targetMinutes.value) || 0;
-    const s = parseInt(targetSecondsInput.value) || 0;
-    targetSeconds = h * 3600 + m * 60 + s;
-    closeCountdownSettings();
-    setTimeout(() => {
-        transitionToTimer();
-    }, 350);
-});
-
-countdownSettingsClose.addEventListener('click', () => {
-    closeCountdownSettings();
-});
-
-countdownSettingsOverlay.addEventListener('click', closeCountdownSettings);
 
 function transitionToTimer() {
     const homeSection = document.getElementById('home-section');
@@ -203,14 +264,6 @@ function transitionToTimer() {
         initializeTimer();
     }, 600);
 }
-
-/* Enter button transition to timer */
-enterButton.addEventListener('click', (e) => {
-    e.preventDefault();
-    closePomodoroSettings();
-    closeCountdownSettings();
-    transitionToTimer();
-});
 
 /* Initialize timer based on mode */
 function initializeTimer() {
@@ -331,15 +384,6 @@ function pauseTimer() {
     }
 }
 
-/* Toggle pause/play */
-pauseBtn.addEventListener('click', () => {
-    if (isRunning) {
-        pauseTimer();
-    } else {
-        startTimer();
-    }
-});
-
 /* Check if timer phase is complete */
 function checkTimerComplete() {
     if (currentMode === 'pomodoro') {
@@ -404,10 +448,17 @@ function closeSettingsMenu() {
     }, 300);
 }
 
-settingsBtn.addEventListener('click', openSettingsMenu);
-settingsOverlay.addEventListener('click', closeSettingsMenu);
-settingsPanelClose.addEventListener('click', closeSettingsPanel);
-settingsPanelOverlay.addEventListener('click', closeSettingsPanel);
+if (settingsOverlay) {
+    settingsOverlay.addEventListener('click', closeSettingsMenu);
+}
+
+if (settingsPanelClose) {
+    settingsPanelClose.addEventListener('click', closeSettingsPanel);
+}
+
+if (settingsPanelOverlay) {
+    settingsPanelOverlay.addEventListener('click', closeSettingsPanel);
+}
 
 function closeSettingsPanel() {
     settingsPanelOverlay.style.opacity = '0';
