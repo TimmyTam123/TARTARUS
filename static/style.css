@@ -1,1028 +1,1061 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* ============================================================
+   Tartarus — liquid glass study timer
+
+   Sizing rules for this file:
+   · the root font size is fluid (vw based), so every rem scales
+     with the viewport;
+   · thicknesses, blurs and shadows use vmin;
+   · layout widths use % / vw / vh (dvh where the mobile URL bar
+     matters). No fixed pixel box is used for layout.
+   ============================================================ */
+
+:root {
+    color-scheme: dark;
+
+    /* Type — two families, everything else inherits */
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-time: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    /* Ink */
+    --ink: rgba(255, 255, 255, 0.94);
+    --ink-soft: rgba(255, 255, 255, 0.66);
+    --ink-faint: rgba(255, 255, 255, 0.42);
+
+    /* Glass — one transparency scale, used everywhere */
+    --glass: rgba(255, 255, 255, 0.05);
+    --glass-hover: rgba(255, 255, 255, 0.10);
+    --glass-on: rgba(255, 255, 255, 0.16);
+    --line: rgba(255, 255, 255, 0.22);
+    --line-strong: rgba(255, 255, 255, 0.42);
+    --blur: blur(1.4vmin) saturate(150%);
+    --shadow:
+        0 0.2vmin 0.8vmin rgba(0, 0, 0, 0.10),
+        0 1.2vmin 3vmin rgba(0, 0, 0, 0.16),
+        inset 0 0.1vmin 0 rgba(255, 255, 255, 0.28),
+        inset 0 -0.1vmin 0 rgba(0, 0, 0, 0.18);
+    --shadow-lift:
+        0 0.4vmin 1.2vmin rgba(0, 0, 0, 0.14),
+        0 2vmin 4vmin rgba(0, 0, 0, 0.20),
+        0 0 2.4vmin rgba(255, 255, 255, 0.10),
+        inset 0 0.15vmin 0 rgba(255, 255, 255, 0.42),
+        inset 0 -0.1vmin 0 rgba(0, 0, 0, 0.16);
+
+    /* Phase accents */
+    --accent: rgba(168, 226, 196, 0.92);
+    --accent-break: rgba(150, 205, 255, 0.92);
+
+    /* One control column: never smaller than a comfortable touch target.
+       The island's geometry is written in terms of these two. */
+    --col: max(2.75rem, 44px);
+    --gap: 0.5rem;
+
+    --r: clamp(0.55rem, 1.4vmin, 1rem);
+    --r-lg: clamp(0.9rem, 2.2vmin, 1.5rem);
+    --pad: clamp(0.85rem, 2.4vmin, 1.6rem);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --spring: cubic-bezier(0.34, 1.2, 0.36, 1);
+    --dim: 0.3; /* driven by the Background dim slider */
+}
+
+*,
+*::before,
+*::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html {
+    /* 14px on a phone → 18px on a large desktop, everything follows */
+    font-size: clamp(0.875rem, 0.62vw + 0.7rem, 1.15rem);
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-ui);
+    color: var(--ink);
+    /* Stands in for the video until it can play (or if autoplay is blocked) */
+    background: radial-gradient(120% 90% at 70% 20%, #1d2a26 0%, #0d1210 60%, #070a09 100%);
+    min-height: 100dvh;
     overflow: hidden;
-    height: 100vh;
-    width: 100vw;
-    cursor: none;
+    -webkit-font-smoothing: antialiased;
 }
 
-button,
-a,
-button *,
-a *,
-.glass-button,
-.glass-button * {
-    cursor: none !important;
+/* Focus ring — visible on every interactive element, keyboard only */
+:focus-visible {
+    outline: 0.25vmin solid var(--line-strong);
+    outline-offset: 0.3vmin;
 }
 
-/* Custom Cursor Trail Canvas */
-#cursor-trail {
+/* ── Backdrop ─────────────────────────────────────────────── */
+
+.backdrop,
+.scrim {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
-    z-index: 250;
 }
 
-/* Video Background */
-.video-background {
-    position: fixed;
-    top: 0;
-    left: 0;
+.backdrop { object-fit: cover; z-index: -2; }
+.scrim { background: rgba(0, 0, 0, var(--dim)); z-index: -1; }
+
+/* ── Shared glass surface ─────────────────────────────────── */
+
+.glass {
+    background: var(--glass);
+    border: 0.15vmin solid var(--line);
+    border-radius: var(--r-lg);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    box-shadow: var(--shadow);
+}
+
+/* ── Home ─────────────────────────────────────────────────── */
+
+.home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1rem, 3vh, 2rem);
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: -2;
+    min-height: 100dvh;
+    padding: max(var(--pad), env(safe-area-inset-top)) var(--pad);
+    text-align: center;
+    transition: opacity 0.5s var(--ease);
 }
 
-.video-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.3);
-    z-index: -1;
-}
-
-/* Home Container */
-.home-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    width: 100vw;
-    opacity: 1;
-}
-
-/* Home Content Wrapper */
-.home-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 40px;
-}
-
-/* Timer Mode Selector Wrapper */
-.timer-mode-selector-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-}
-
-.selector-title {
-    font-size: 28px;
+.eyebrow {
+    font-size: 0.8rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    letter-spacing: 0.5px;
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
 }
 
-/* Timer Mode Selector - Segmented Group */
-.timer-mode-selector {
-    display: flex;
-    border-radius: 12px;
-    border: 1.5px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    padding: 4px;
-    gap: 4px;
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-}
-
-/* Segmented Mode Button */
-.mode-button-segmented {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 16px 24px;
-    border: 1.5px solid transparent;
-    background: transparent;
-    border-radius: 10px;
-    color: rgba(255, 255, 255, 0.6);
-    cursor: none !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 14px;
-    font-weight: 600;
-    min-width: 100px;
-}
-
-.mode-icon {
-    font-size: 2rem;
-    display: block;
-    transition: transform 0.3s ease;
-}
-
-.mode-label {
-    font-size: 12px;
-    display: block;
-}
-
-/* Hover state */
-.mode-button-segmented:hover {
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.08);
-}
-
-/* Active state (selected) */
-.mode-button-segmented.active {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: rgba(255, 255, 255, 0.95);
-    box-shadow: 
-        inset 0 1px 2px rgba(255, 255, 255, 0.2),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.1),
-        0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.mode-button-segmented.active .mode-icon {
-    transform: scale(1.1);
-}
-
-/* Glass Button - Liquid Glass Glassmorphism */
-.glass-button {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    padding: 18px 48px;
-    font-size: 18px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.75);
-    text-decoration: none;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    
-    /* Liquid Glass Base */
-    background: rgba(255, 255, 255, 0.04);
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
-    border-radius: 50px;
-    
-    /* Premium Backdrop Filters */
-    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    
-    /* Multi-layer Shadow for Depth */
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-    
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 150px;
-    letter-spacing: 1px;
-    position: relative;
-    overflow: hidden;
-    will-change: transform, box-shadow, background;
-}
-
-/* Hover State - Enhanced Liquid Glass */
-.glass-button:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    
-    box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.12),
-        0 12px 32px rgba(0, 0, 0, 0.16),
-        0 0px 24px rgba(255, 255, 255, 0.1),
-        inset 0 1px 3px rgba(255, 255, 255, 0.4),
-        inset 0 -1px 3px rgba(0, 0, 0, 0.15);
-    
-    transform: translateY(-3px);
-}
-
-/* Active State */
-.glass-button:active {
-    transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 6px 16px rgba(0, 0, 0, 0.14),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Focus State for Accessibility */
-.glass-button:focus {
-    outline: none;
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        0 0 0 3px rgba(255, 255, 255, 0.2),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.glass-button span {
-    display: block;
-    position: relative;
-    z-index: 1;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: center;
-}
-
-.glass-button:hover span {
-    transform: scale(0.98);
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .glass-button {
-        padding: 15px 40px;
-        font-size: 16px;
-        min-width: 120px;
-    }
-}
-
-@media (max-width: 480px) {
-    .glass-button {
-        padding: 12px 32px;
-        font-size: 14px;
-        min-width: 100px;
-    }
-}
-
-/* Additional styles for other pages */
-nav {
-    background-color: #333;
-    padding: 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-nav ul {
-    list-style: none;
-    display: flex;
-    gap: 2rem;
-}
-
-nav a {
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-nav a:hover {
-    color: #ddd;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 2rem;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    padding: 2rem;
-}
-
-h1 {
-    color: #333;
-    margin-bottom: 1rem;
-}
-
-p {
-    color: #666;
+.hint {
+    max-width: min(92%, 34rem);
+    font-size: 0.85rem;
     line-height: 1.6;
+    color: var(--ink-soft);
+    transition: opacity 0.3s var(--ease);
 }
 
-/* ========================================
-   ACTIVE PAGE - TIMER UI STYLES
-   ======================================== */
-
-/* Timer UI Wrapper - Layout Container */
-.timer-ui-wrapper {
-    position: fixed;
-    top: 20px;
-    left: 20px;
+/* Segmented mode picker — the glass lozenge slides between modes */
+.modes {
+    position: relative;
     display: flex;
-    gap: 12px;
+    width: min(94vw, 34rem);
+    padding: 0.35rem;
+    gap: 0.25rem;
+}
+
+.modes__thumb {
+    position: absolute;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    left: 0;
+    width: 0;
+    border-radius: calc(var(--r-lg) - 0.35rem);
+    background: var(--glass-on);
+    box-shadow:
+        inset 0 0.15vmin 0 rgba(255, 255, 255, 0.38),
+        0 0.3vmin 1vmin rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    transition: left 0.45s var(--spring), width 0.45s var(--spring), opacity 0.3s var(--ease);
+}
+
+.modes.is-set .modes__thumb { opacity: 1; }
+
+.mode {
+    position: relative;
+    flex: 1;
+    padding: clamp(0.7rem, 1.8vh, 1.15rem) 0.5rem;
+    border: 0;
+    border-radius: calc(var(--r-lg) - 0.35rem);
+    background: transparent;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    transition: color 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+.mode:hover { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
+.mode[aria-selected="true"] { color: var(--ink); background: transparent; }
+
+.home__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    opacity: 0;
+    transform: translateY(1.5vh);
+    pointer-events: none;
+    transition: opacity 0.4s var(--ease), transform 0.4s var(--spring);
+}
+
+.home__actions.is-ready { opacity: 1; transform: none; pointer-events: auto; }
+
+/* ── Buttons ──────────────────────────────────────────────── */
+
+.btn {
+    padding: clamp(0.7rem, 1.6vh, 1rem) clamp(1.4rem, 4vw, 2.6rem);
+    border: 0.15vmin solid var(--line);
+    border-radius: 10rem;
+    background: var(--glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    box-shadow: var(--shadow);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    transition: transform 0.35s var(--ease), background 0.35s var(--ease),
+                border-color 0.35s var(--ease), box-shadow 0.35s var(--ease), color 0.35s var(--ease);
+}
+
+.btn:hover {
+    background: var(--glass-hover);
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-lift);
+    color: var(--ink);
+    transform: translateY(-0.35vh);
+}
+
+.btn:active { transform: translateY(0); background: var(--glass-on); }
+.btn--primary { color: var(--ink); min-width: min(40vw, 9rem); }
+
+.iconbtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--col);
+    min-height: var(--col);
+    border: 0.15vmin solid var(--line);
+    border-radius: var(--r);
+    background: var(--glass);
+    font-size: 1.05rem;
+    line-height: 1;
+    color: var(--ink-soft);
+    transition: transform 0.3s var(--ease), background 0.3s var(--ease),
+                border-color 0.3s var(--ease), color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.iconbtn:hover {
+    background: var(--glass-hover);
+    border-color: var(--line-strong);
+    color: var(--ink);
+    box-shadow: var(--shadow-lift);
+    transform: scale(1.04);
+}
+
+.iconbtn:active { transform: scale(0.97); }
+.iconbtn.is-running { border-color: rgba(168, 226, 196, 0.45); color: var(--accent); }
+.iconbtn.is-on { border-color: rgba(168, 226, 196, 0.45); color: var(--accent); background: var(--glass-on); }
+.iconbtn.is-off { color: var(--ink-faint); }
+
+/* ── Icons ────────────────────────────────────────────────── */
+
+.sprite { display: none; }
+
+.icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: none;
+    pointer-events: none; /* clicks belong to the button */
+}
+
+/* ── Running session HUD ──────────────────────────────────────
+   One glass box holding the clock and every control, dragged around as a
+   single island. */
+
+.hud {
+    position: fixed;
+    top: max(var(--pad), env(safe-area-inset-top));
+    left: max(var(--pad), env(safe-area-inset-left));
     z-index: 10;
     opacity: 0;
+    touch-action: none; /* the island is dragged, not scrolled */
+    transition: opacity 0.5s var(--ease);
 }
 
-/* Timer Display Box - Liquid Glass */
-.timer-display-box {
-    width: clamp(250px, 20vw, 380px);
-    height: 120px;
-    
-    /* Liquid Glass Base */
-    background: rgba(255, 255, 255, 0.04);
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
-    border-radius: 16px;
-    
-    /* Premium Backdrop Filters */
-    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    
-    /* Multi-layer Shadow */
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-    
+.hud.is-ready { opacity: 1; }
+
+/* Once dragged, a card is placed by percentage of the viewport, so it keeps
+   its spot when the window resizes or the phone rotates. */
+.hud.is-placed,
+.card.is-placed {
+    top: var(--y-pos);
+    left: var(--x-pos);
+    right: auto;
+    transform: none;
+}
+
+.hud__box {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
+    flex-direction: column;
+    gap: var(--gap);
+    padding: var(--gap);
+    cursor: grab;
 }
 
-/* Timer Display Text */
-.timer-display {
-    font-size: clamp(2rem, 4vw, 3rem);
+.hud.is-dragging .hud__box { cursor: grabbing; }
+
+/* The groove: says the box can be picked up */
+.grip {
+    flex: none;
+    width: 2.2rem;
+    height: 0.28rem;
+    margin: 0 auto;
+    border-radius: 10rem;
+    background: var(--line);
+    transition: background 0.3s var(--ease);
+}
+
+.hud__box:hover .grip,
+.card:hover .grip { background: var(--line-strong); }
+
+.hud__row { display: flex; gap: var(--gap); }
+
+.hud__card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    width: clamp(10rem, 22vw, 16rem);
+    padding: clamp(0.7rem, 1.6vh, 1.1rem) var(--pad);
+    border: 0.15vmin solid rgba(255, 255, 255, 0.10);
+    border-radius: var(--r);
+    background: rgba(255, 255, 255, 0.045);
+    overflow: hidden;
+}
+
+.hud__phase {
+    font-size: 0.6rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.85);
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    letter-spacing: 0.08em;
-    font-family: 'Courier New', monospace;
-    pointer-events: none;
+    letter-spacing: 0.28em;
+    text-indent: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    transition: color 0.4s var(--ease);
+}
+
+.hud__card.is-break .hud__phase { color: var(--accent-break); }
+.hud__card.is-focus .hud__phase { color: var(--accent); }
+
+.hud__time {
+    font-family: var(--font-time);
+    font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    text-shadow: 0 0.4vmin 0.8vmin rgba(0, 0, 0, 0.35);
+}
+
+/* The lower edge fills with light as the block runs down */
+.hud__progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: calc(var(--p, 0) * 100%);
+    height: 0.3vmin;
+    background: linear-gradient(90deg, transparent, var(--accent));
+    transition: width 0.4s linear, background 0.4s var(--ease);
+}
+
+.hud__card.is-break .hud__progress { background: linear-gradient(90deg, transparent, var(--accent-break)); }
+
+.hud__controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+}
+
+.hud__controls .iconbtn { flex: 1; }
+
+/* The two columns that come and go: the paused controls, and the study
+   tools. Both are clipped open and shut rather than removed, so the box
+   grows and shrinks over the same 0.4s instead of jumping a column wide. */
+.hud__drawer {
+    max-width: 0;
+    margin-left: calc(-1 * var(--gap)); /* and close the flex gap behind it */
+    overflow: hidden;
+    opacity: 0;
+    transition: max-width 0.4s var(--ease), max-height 0.4s var(--ease),
+                margin-left 0.4s var(--ease), margin-top 0.4s var(--ease),
+                opacity 0.4s var(--ease);
+}
+
+.hud__drawer.is-ready { max-width: var(--col); margin-left: 0; opacity: 1; }
+
+/* ── Study cards ──────────────────────────────────────────────
+   The shell the toolbox opens: a glass card with a groove to pick it up
+   by, floating over the session and dragged anywhere. Each card sets its
+   own width and fills in its own body. */
+
+.card {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 11;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    max-height: calc(100dvh - 2 * var(--pad));
+    overflow-y: auto;
+    padding: var(--gap);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    scrollbar-width: thin;
+    transition: opacity 0.35s var(--ease);
+}
+
+.card.is-ready { opacity: 1; }
+
+/* Picked up by its head alone, so a card too tall for the screen can still
+   be scrolled by touch. */
+.card__head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1rem;
+    touch-action: none;
+    cursor: grab;
+}
+
+.card.is-dragging .card__head { cursor: grabbing; }
+
+.card__close {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    display: flex;
+    border: 0;
+    background: transparent;
+    color: var(--ink-faint);
+    transform: translateY(-50%);
+    transition: color 0.3s var(--ease);
+}
+
+.card__close:hover { color: var(--ink); }
+
+/* ── Calculator ───────────────────────────────────────────────
+   An fx-82CW in glass. The face is laid out as the real one is: a
+   control block six columns wide holding the cursor cross and the page
+   rocker, six columns of function keys, then five wider number keys. */
+
+.calc { width: min(94vw, 21rem); }
+
+/* ── Its screen ─────────────────────────────────────────────── */
+
+.calc__screen {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-height: 6.4rem;
+    padding: 0.45rem 0.6rem 0.55rem;
+    border: 0.15vmin solid rgba(255, 255, 255, 0.10);
+    border-radius: var(--r);
+    background: rgba(255, 255, 255, 0.045);
+    font-family: var(--font-time);
+}
+
+.calc__flags {
+    display: flex;
+    gap: 0.55rem;
+    min-height: 0.7rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-faint);
+}
+
+/* Lit only while shift is armed, like the indicator on the real screen */
+#calc-armed {
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s var(--ease);
+}
+
+.calc.is-shift #calc-armed { opacity: 1; }
+
+.calc__work { flex: 1; }
+
+/* Both lines run off the side rather than wrapping, the way the real one
+   scrolls its entry. */
+.calc__entry,
+.calc__out {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+
+.calc__entry::-webkit-scrollbar,
+.calc__out::-webkit-scrollbar { display: none; }
+
+.calc__entry {
+    min-height: 1.5rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+}
+
+.calc__out {
+    min-height: 1.9rem;
+    font-size: 1.3rem;
+    text-align: right;
+}
+
+.calc__caret {
+    display: inline-block;
+    width: 0.09rem;
+    height: 0.95rem;
+    background: var(--accent);
+    vertical-align: -0.18rem;
+    animation: blink 1.1s steps(2, jump-none) infinite;
+}
+
+/* The wrapping cursor INS arms, which swallows the value before it */
+.calc__caret.is-wrap { width: 0.3rem; opacity: 0.55; }
+
+@keyframes blink { 50% { opacity: 0.15; } }
+
+/* A fraction is drawn the way it is written — stacked over its bar. The
+   same rule serves the entry, the answer, and the key that inserts one. */
+.frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: -0.45em;
+    line-height: 1.1;
+    text-align: center;
+}
+
+.frac > span { padding: 0 0.18em; }
+.frac > span:first-child { border-bottom: 0.07em solid currentColor; }
+
+/* ── Its tables ─────────────────────────────────────────────── */
+
+.calc__grid {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-height: 0;
+}
+
+/* The real screen shows about five lines and scrolls the rest, however
+   long the table is. */
+.calc__scroll {
+    flex: 1;
+    min-height: 0;
+    max-height: 4.2rem;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.calc__scroll::-webkit-scrollbar { display: none; }
+
+.calc__table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* even columns, whatever is in them */
+    font-size: 0.58rem;
+}
+
+/* The heading stays put while the rows run under it — frosted rather
+   than filled in, so it stays part of the glass. */
+.calc__table th {
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(0.8vmin);
+    font-weight: 400;
+    color: var(--ink-faint);
+}
+
+.calc__table th,
+.calc__table td {
+    padding: 0.05rem 0.25rem;
+    text-align: right;
     white-space: nowrap;
 }
 
-/* Timer Buttons Stack - Vertical Container */
-.timer-buttons-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    height: 120px;
+.calc__table th:first-child,
+.calc__table td:first-child { text-align: left; }
+
+.calc__table td { color: var(--ink-soft); }
+
+.calc__table td.is-at {
+    border-radius: 0.15rem;
+    background: var(--glass-on);
+    color: var(--accent);
 }
 
-/* Timer Button - Rectangle Style */
-.timer-button {
-    width: 70px;
+/* The cell the cursor is on, written out in full underneath. */
+.calc__cell {
+    min-height: 1.1rem;
+    overflow-x: auto;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    color: var(--ink);
+    scrollbar-width: none;
+}
+
+.calc__cell::-webkit-scrollbar { display: none; }
+
+/* What a screen is asking for, above the line it is asking on. */
+.calc__ask {
+    font-size: 0.55rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-faint);
+}
+
+/* ── Its menus ──────────────────────────────────────────────── */
+
+.calc__menu {
+    display: flex;
     flex: 1;
-    border: none;
-    border-radius: 12px;
-    padding: 0;
-    
-    /* Liquid Glass Base */
-    background: rgba(255, 255, 255, 0.06);
-    border: 1.2px solid rgba(255, 255, 255, 0.2);
-    
-    /* Premium Backdrop Filters */
-    backdrop-filter: blur(10px) saturate(140%) contrast(1.05);
-    -webkit-backdrop-filter: blur(10px) saturate(140%) contrast(1.05);
-    
-    /* Shadow for Depth */
-    box-shadow: 
-        0 2px 6px rgba(0, 0, 0, 0.08),
-        0 4px 12px rgba(0, 0, 0, 0.1),
-        inset 0 1px 2px rgba(255, 255, 255, 0.25),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.15);
-    
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Button Icon */
-.button-icon {
-    font-size: 1.6rem;
-    color: rgba(255, 255, 255, 0.75);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Timer Button Hover State */
-.timer-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.35);
-    backdrop-filter: blur(14px) saturate(160%) contrast(1.1);
-    -webkit-backdrop-filter: blur(14px) saturate(160%) contrast(1.1);
-    
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 6px 16px rgba(0, 0, 0, 0.12),
-        0 0 12px rgba(255, 255, 255, 0.08),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.1);
-    
-    transform: scale(1.05);
-}
-
-.timer-button:hover .button-icon {
-    transform: scale(1.15);
-    color: rgba(255, 255, 255, 0.95);
-}
-
-/* Timer Button Active State */
-.timer-button:active {
-    transform: scale(0.98);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 
-        0 1px 4px rgba(0, 0, 0, 0.1),
-        0 3px 8px rgba(0, 0, 0, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.2),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-}
-
-/* Pause Button - Running State (Green) */
-.pause-button.paused {
-    background: rgba(76, 175, 80, 0.1);
-    border-color: rgba(76, 175, 80, 0.4);
-}
-
-.pause-button.paused:hover {
-    background: rgba(76, 175, 80, 0.15);
-    border-color: rgba(76, 175, 80, 0.6);
-}
-
-/* Settings Menu Overlay */
-.settings-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 100;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
-
-/* Make the start-screen setup panels sit above the home screen and cursor layer. */
-#pomodoro-settings-overlay,
-#countdown-settings-overlay {
-    z-index: 260;
-    pointer-events: auto;
-}
-
-#pomodoro-settings,
-#countdown-settings {
-    z-index: 270;
-    pointer-events: auto;
-}
-
-.settings-overlay.is-visible,
-.settings-panel.is-visible {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Settings Menu */
-.settings-menu {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    gap: 20px;
-    padding: 40px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1.5px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
-    backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        0 0 24px rgba(255, 255, 255, 0.08),
-        inset 0 1px 2px rgba(255, 255, 255, 0.4),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-    z-index: 101;
-    opacity: 0;
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Settings Menu Buttons */
-.settings-menu-button {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    padding: 24px 32px;
-    font-size: 18px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.75);
-    text-decoration: none;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    border: none;
-    
-    /* Liquid Glass Base */
-    background: rgba(255, 255, 255, 0.04);
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
-    border-radius: 12px;
-    
-    /* Premium Backdrop Filters */
-    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    
-    /* Multi-layer Shadow for Depth */
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-    
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 150px;
-    letter-spacing: 1px;
-    position: relative;
-    overflow: hidden;
-    will-change: transform, box-shadow, background;
-    cursor: none !important;
-}
-
-.settings-menu-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    transform: scale(1.05);
-    
-    box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.12),
-        0 12px 32px rgba(0, 0, 0, 0.16),
-        0 0px 24px rgba(255, 255, 255, 0.1),
-        inset 0 1px 3px rgba(255, 255, 255, 0.4),
-        inset 0 -1px 3px rgba(0, 0, 0, 0.15);
-    
-    transform: translateY(-3px);
-}
-
-.settings-menu-button:active {
-    transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 6px 16px rgba(0, 0, 0, 0.14),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -45%);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%);
-    }
-}
-
-/* Mobile Responsive */
-@media (max-width: 1200px) {
-    .timer-display-box {
-        width: clamp(220px, 22vw, 350px);
-        height: 110px;
-    }
-    
-    .timer-button {
-        width: 65px;
-    }
-}
-
-@media (max-width: 768px) {
-    .timer-ui-wrapper {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .timer-display-box {
-        width: clamp(200px, 70vw, 320px);
-        height: 90px;
-        padding: 16px;
-    }
-    
-    .timer-display {
-        font-size: clamp(1.5rem, 5vw, 2.2rem);
-    }
-    
-    .timer-buttons-stack {
-        flex-direction: row;
-        height: auto;
-        gap: 10px;
-    }
-    
-    .timer-button {
-        width: auto;
-        flex: 1;
-        height: 50px;
-    }
-    
-    .button-icon {
-        font-size: 1.3rem;
-    }
-}
-/* Fade Overlay for Option 1 Transition */
-.fade-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 1);
-    z-index: 200;
-    opacity: 0;
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
-}
-
-/* Example Text Container */
-.example-text-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 150;
-    opacity: 1;
-}
-
-/* Example Text */
-.example-text {
-    font-size: clamp(2rem, 6vw, 4rem);
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.85);
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    letter-spacing: 0.02em;
-    text-align: center;
-    padding: 40px;
-    max-width: 90vw;
-}
-
-/* Claude-Inspired Settings Panel Overlay */
-.settings-panel-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 200;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
-
-/* Claude-Inspired Settings Panel */
-.settings-panel {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    height: 80vh;
-    max-width: 1000px;
-    display: flex;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1.5px solid rgba(255, 255, 255, 0.3);
-    border-radius: 16px;
-    backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(180%) contrast(1.2);
-    box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.2),
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 0 24px rgba(255, 255, 255, 0.1),
-        inset 0 1px 2px rgba(255, 255, 255, 0.4),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.15);
-    z-index: 201;
-    opacity: 0;
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
     flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.62rem;
 }
 
-/* Settings panel for full content width (no sidebar) */
-.settings-panel:has(.settings-content.full-width) {
+.calc__title {
+    color: var(--ink-faint);
+    letter-spacing: 0.14em;
+}
+
+.calc__list {
+    max-height: 4.6rem;
+    overflow-y: auto;
+    list-style: none;
+    scrollbar-width: none;
+}
+
+.calc__list::-webkit-scrollbar { display: none; }
+
+.calc__item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.08rem 0.25rem;
+    border-radius: 0.2rem;
+    color: var(--ink-soft);
+}
+
+.calc__item.is-at {
+    background: var(--glass-on);
+    color: var(--accent);
+}
+
+.calc__item span { color: var(--ink-faint); }
+.calc__item.is-at span { color: inherit; }
+
+/* ── Its keypad ─────────────────────────────────────────────── */
+
+.calc__pad {
+    display: flex;
     flex-direction: column;
+    gap: 0.3rem;
+}
+
+.pad {
+    display: grid;
+    gap: 0.3rem;
+}
+
+/* The control block is the one part that is not a plain grid: the cursor
+   keys sit in a cross, with the page rocker standing beside it. */
+.pad--top {
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-areas:
+        "on   home .    up   .    page"
+        "set  back lft  ok   rgt  page"
+        "shft var  fun  dn   cat  tool";
+}
+
+.at-on { grid-area: on; }
+.at-home { grid-area: home; }
+.at-set { grid-area: set; }
+.at-back { grid-area: back; }
+.at-shift { grid-area: shft; }
+.at-var { grid-area: var; }
+.at-fun { grid-area: fun; }
+.at-cat { grid-area: cat; }
+.at-tool { grid-area: tool; }
+.at-up { grid-area: up; }
+.at-left { grid-area: lft; }
+.at-ok { grid-area: ok; }
+.at-right { grid-area: rgt; }
+.at-down { grid-area: dn; }
+.at-page { grid-area: page; }
+
+.pad__rocker {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 0.3rem;
+}
+
+.pad--fn { grid-template-columns: repeat(6, 1fr); }
+.pad--num { grid-template-columns: repeat(5, 1fr); }
+
+/* The alternate function is printed above the key on the left, with the
+   same small elbow the real face uses to point back down at it. A key's
+   own name, where it has one, is centred above instead. */
+.key {
+    position: relative;
+    display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 2.3rem;
+    padding: 0.62rem 0.1rem 0.12rem;
+    border: 0.15vmin solid var(--line);
+    border-radius: var(--r);
+    background: var(--glass);
+    font: inherit;
+    font-size: 0.78rem;
+    line-height: 1;
+    color: var(--ink-soft);
+    transition: transform 0.25s var(--ease), background 0.25s var(--ease),
+                border-color 0.25s var(--ease), color 0.25s var(--ease);
 }
 
-/* Close Button */
-.settings-panel-close {
+.pad--num .key { min-height: 2.5rem; }
+
+.key i,
+.key b {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 20px;
-    cursor: none !important;
+    top: 0.17rem;
+    font-size: 0.46rem;
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--ink-faint);
+    transition: color 0.25s var(--ease);
+}
+
+.key i { left: 0.3rem; }
+
+.key i::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 0.16rem;
+    height: 0.16rem;
+    border-left: 0.06rem solid currentColor;
+    border-bottom: 0.06rem solid currentColor;
+}
+
+.key b {
+    left: 0;
+    right: 0;
+    font-size: 0.42rem;
+    letter-spacing: 0.02em;
+}
+
+.calc.is-shift .key i { color: var(--accent); }
+
+.key em { font-style: italic; }
+.key sup, .key sub { font-size: 0.62em; }
+.key .icon { width: 1.05rem; height: 1.05rem; }
+.icon--flip { transform: scaleY(-1); }
+
+.key:hover { background: var(--glass-hover); border-color: var(--line-strong); color: var(--ink); }
+.key:active { background: var(--glass-on); transform: scale(0.95); }
+.key.is-on { border-color: rgba(168, 226, 196, 0.45); background: var(--glass-on); color: var(--accent); }
+
+/* The face's own three tones: the dark keys around the cursor cross, the
+   one coloured key, and the light keys everywhere else. SHIFT wears the
+   accent faintly to mark itself out, and `.is-on` brings it up full once
+   it is armed — so the key still reads as lit or not at a glance. */
+.key--dim { background: transparent; border-color: rgba(255, 255, 255, 0.12); }
+.key--lit { color: rgba(168, 226, 196, 0.5); border-color: rgba(168, 226, 196, 0.22); }
+.key--go { color: var(--ink); }
+
+/* ── Notes ────────────────────────────────────────────────────
+   A sheet to think on. Dragged by the same head; the sheet itself can be
+   pulled taller, and the card re-places itself as it grows. */
+
+.notes { width: min(92vw, 24rem); }
+
+.notes__sheet {
+    min-height: 40vh;
+    max-height: 70vh;
+    padding: 0.7rem 0.85rem;
+    border: 0.15vmin solid rgba(255, 255, 255, 0.10);
+    border-radius: var(--r);
+    background: rgba(255, 255, 255, 0.045);
+    font: inherit;
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: var(--ink);
+    resize: vertical;
+    scrollbar-width: thin;
+}
+
+.notes__sheet::placeholder { color: var(--ink-faint); }
+
+/* ── Focus mode ───────────────────────────────────────────── */
+
+.zen {
+    position: fixed;
+    inset: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 10;
+    gap: clamp(0.5rem, 2vh, 1.25rem);
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(0.6vmin);
+    -webkit-backdrop-filter: blur(0.6vmin);
+    opacity: 0;
+    transition: opacity 0.5s var(--ease);
 }
 
-.settings-panel-close:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: rgba(255, 255, 255, 0.9);
+.zen.is-ready { opacity: 1; }
+
+.zen__phase {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.34em;
+    text-indent: 0.34em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
 }
 
-/* Settings Sidebar */
-.settings-sidebar {
-    width: 220px;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+.zen__time {
+    font-family: var(--font-time);
+    font-size: clamp(3rem, 16vw, 12rem);
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    text-shadow: 0 1vmin 4vmin rgba(0, 0, 0, 0.45);
+}
+
+.zen__hint { font-size: 0.75rem; color: var(--ink-faint); }
+
+/* ── Modals ───────────────────────────────────────────────── */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: var(--pad);
+    z-index: 100;
+}
+
+.modal__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
+}
+
+.modal__card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    padding: 30px 0;
-    overflow-y: auto;
+    width: min(92vw, 30rem);
+    max-height: 86dvh;
+    padding: clamp(1.1rem, 3vh, 2rem);
+    gap: clamp(0.9rem, 2.5vh, 1.5rem);
+    opacity: 0;
+    transform: translateY(2vh) scale(0.98);
+    transition: opacity 0.35s var(--ease), transform 0.35s var(--spring);
 }
 
-/* Sidebar Item */
-.settings-sidebar-item {
-    padding: 14px 24px;
-    color: rgba(255, 255, 255, 0.6);
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    border-left: 3px solid transparent;
-    font-size: 15px;
-    user-select: none;
-}
+.modal.is-ready .modal__scrim { opacity: 1; }
+.modal.is-ready .modal__card { opacity: 1; transform: none; }
 
-.settings-sidebar-item:hover {
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.settings-sidebar-item.active {
-    color: rgba(255, 255, 255, 0.95);
-    background: rgba(255, 255, 255, 0.08);
-    border-left-color: rgba(100, 200, 255, 0.8);
-}
-
-/* Settings Content */
-.settings-content {
-    flex: 1;
-    padding: 30px 40px;
-    overflow-y: auto;
+.modal__head {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
 }
 
-/* Settings Section */
-.settings-section {
-    display: none;
-}
+.modal__head h2 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.01em; }
+.modal__head .iconbtn { min-width: 2.25rem; min-height: 2.25rem; font-size: 0.85rem; }
 
-.settings-section.active {
+.modal__body { overflow-y: auto; }
+.modal__foot { display: flex; justify-content: flex-end; }
+
+/* ── Form controls ────────────────────────────────────────── */
+
+.fields { display: flex; flex-direction: column; gap: clamp(1rem, 3vh, 1.75rem); }
+.field { display: block; }
+
+.field__label {
     display: block;
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-.settings-section h2 {
-    font-size: 24px;
-    color: rgba(255, 255, 255, 0.9);
-    margin-bottom: 16px;
+    margin-bottom: 0.7rem;
+    font-size: 0.85rem;
     font-weight: 600;
+    color: var(--ink);
 }
 
-.settings-section p {
-    color: rgba(255, 255, 255, 0.6);
-    line-height: 1.6;
-    font-size: 15px;
-}
+.field__label output { font-family: var(--font-time); font-variant-numeric: tabular-nums; }
+.field__note { font-family: var(--font-time); font-size: 1.1rem; color: var(--ink-soft); }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-/* Scrollbar styling for settings panel */
-.settings-sidebar::-webkit-scrollbar,
-.settings-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.settings-sidebar::-webkit-scrollbar-track,
-.settings-content::-webkit-scrollbar-track {
+/* The input keeps a finger-sized box; only the track is hairline. */
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 1.5rem;
     background: transparent;
 }
 
-.settings-sidebar::-webkit-scrollbar-thumb,
-.settings-content::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
+/* Vendor track selectors must stay in separate rules: an unknown
+   pseudo-element invalidates the whole selector list. */
+.slider::-webkit-slider-runnable-track {
+    height: 0.4rem;
+    border-radius: 10rem;
+    background: rgba(255, 255, 255, 0.14);
 }
 
-.settings-sidebar::-webkit-scrollbar-thumb:hover,
-.settings-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-/* Settings for full-width content (Pomodoro, Countdown) */
-.settings-content.full-width {
-    padding: 30px 40px;
-    width: 100%;
-    max-width: 600px;
-}
-
-.settings-content.full-width h2 {
-    font-size: 28px;
-    margin-bottom: 30px;
-}
-
-/* Setting Group */
-.setting-group {
-    margin-bottom: 28px;
-}
-
-.setting-group label {
-    display: block;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-}
-
-/* Slider Container */
-.slider-container {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-/* Range Slider */
-
-/* Custom range slider styles */
-.slider {
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.1);
-    outline: none;
-    -webkit-appearance: none;
-    appearance: none;
+.slider::-moz-range-track {
+    height: 0.4rem;
+    border-radius: 10rem;
+    background: rgba(255, 255, 255, 0.14);
 }
 
 .slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: -0.425rem; /* centres the thumb on the track */
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.8);
-    cursor: none !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-}
-
-.slider::-webkit-slider-thumb:hover {
-    background: rgba(255, 255, 255, 1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    background: var(--ink);
+    box-shadow: 0 0.3vmin 1vmin rgba(0, 0, 0, 0.35);
 }
 
 .slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 0;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.8);
-    cursor: none !important;
-    border: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
+    background: var(--ink);
+    box-shadow: 0 0.3vmin 1vmin rgba(0, 0, 0, 0.35);
 }
 
-.slider::-moz-range-thumb:hover {
-    background: rgba(255, 255, 255, 1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+.duration { display: flex; gap: 0.75rem; }
+.duration label { display: flex; flex: 1; align-items: baseline; gap: 0.4rem; font-size: 0.75rem; color: var(--ink-faint); }
+
+.number {
+    width: 100%;
+    min-width: 0;
+    padding: 0.6rem 0.7rem;
+    border: 0.15vmin solid var(--line);
+    border-radius: var(--r);
+    background: var(--glass);
+    font-family: var(--font-time);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
 }
 
-.slider-value {
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 600;
-    min-width: 40px;
-    text-align: right;
-}
+.number:focus { outline: none; border-color: var(--line-strong); background: var(--glass-hover); }
 
-/* Number Input */
-.number-input {
-    width: 100px;
-    padding: 10px 12px;
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 16px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    cursor: none !important;
-}
+.switch { display: flex; align-items: center; gap: 0.8rem; font-size: 0.85rem; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 
-.number-input:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.4);
+.switch__track {
+    flex: none;
+    display: flex;
+    align-items: center;
+    width: 2.9rem;
+    padding: 0.18rem;
+    border: 0.15vmin solid var(--line);
+    border-radius: 10rem;
     background: rgba(255, 255, 255, 0.08);
+    transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
 }
 
-/* Confirm Button */
-.confirm-button {
-    padding: 14px 32px;
-    margin-top: 30px;
-    font-size: 16px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
-    border: none;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
-    border-radius: 8px;
-    backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    -webkit-backdrop-filter: blur(12px) saturate(150%) contrast(1.1);
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
-    cursor: none !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.switch__knob {
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    transition: transform 0.3s var(--spring), background 0.3s var(--ease);
 }
 
-.confirm-button:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.12),
-        0 12px 32px rgba(0, 0, 0, 0.16),
-        0 0px 24px rgba(255, 255, 255, 0.08),
-        inset 0 1px 3px rgba(255, 255, 255, 0.4),
-        inset 0 -1px 3px rgba(0, 0, 0, 0.15);
+.switch input:checked + .switch__track { background: rgba(168, 226, 196, 0.28); border-color: rgba(168, 226, 196, 0.5); }
+.switch input:checked + .switch__track .switch__knob { transform: translateX(1.4rem); background: var(--ink); }
+.switch input:focus-visible + .switch__track { outline: 0.25vmin solid var(--line-strong); outline-offset: 0.3vmin; }
+
+/* Scrollbars inside glass */
+.modal__body::-webkit-scrollbar { width: 0.6vmin; }
+.modal__body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10rem; }
+
+/* ── Custom cursor ────────────────────────────────────────── */
+
+#cursor-trail {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
 }
 
-.confirm-button:active {
-    transform: scale(0.98);
+/* Only take over the pointer where there is a real one to replace,
+   and only while the trail is switched on. */
+@media (hover: hover) and (pointer: fine) {
+    body.trail-on,
+    body.trail-on * { cursor: none; }
 }
-@media (max-width: 480px) {
-    .timer-ui-wrapper {
-        top: 20px;
-        left: 20px;
-        gap: 8px;
+
+body:not(.trail-on) #cursor-trail { display: none; }
+
+/* ── Small screens ────────────────────────────────────────── */
+
+@media (max-width: 40rem) {
+    /* On a phone the session is the whole screen, so centre it. */
+    .hud {
+        top: 50%;
+        left: max(var(--pad), env(safe-area-inset-left));
+        right: max(var(--pad), env(safe-area-inset-right));
+        transform: translateY(-50%);
     }
-    
-    .timer-display-box {
-        width: min(85vw, 280px);
-        height: 80px;
-        padding: 14px;
+
+    /* A dragged island keeps its own width instead of spanning the screen */
+    .hud.is-placed { width: min(88vw, 22rem); }
+
+    .hud__row { flex-direction: column; }
+    .hud__card { width: 100%; padding: clamp(1.2rem, 4vh, 2rem) var(--pad); }
+    .hud__time { font-size: clamp(2.6rem, 14vw, 4.5rem); }
+    .hud__controls { flex-direction: row; justify-content: center; }
+    .modes { flex-wrap: wrap; }
+    .mode { flex: 1 1 30%; }
+
+    /* The row is stacked here, so the extras column opens downwards */
+    .hud__drawer {
+        max-width: none;
+        max-height: 0;
+        margin-left: 0;
+        margin-top: calc(-1 * var(--gap));
     }
-    
-    .timer-display {
-        font-size: clamp(1.2rem, 5.5vw, 1.8rem);
-        letter-spacing: 0.05em;
-    }
-    
-    .timer-buttons-stack {
-        flex-direction: row;
-        height: 80px;
-        gap: 8px;
-    }
-    
-    .timer-button {
-        width: auto;
-        flex: 1;
-        height: 100%;
-        border-radius: 10px;
-    }
-    
-    .button-icon {
-        font-size: 1.1rem;
+
+    .hud__drawer.is-ready { max-width: none; max-height: var(--col); margin-top: 0; }
+}
+
+/* ── Reduced motion ───────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
     }
 }
