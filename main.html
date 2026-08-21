@@ -74,6 +74,31 @@
         <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
             <path d="M6.75 6.75 17.25 17.25M17.25 6.75 6.75 17.25"/>
         </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+            <path d="M12 6v12M6 12h12"/>
+        </symbol>
+        <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+            <path d="M6 12h12"/>
+        </symbol>
+        <symbol id="i-bin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 6.75h15M9.75 6.75V5.2A1.2 1.2 0 0 1 11 4h2a1.2 1.2 0 0 1 1.25 1.2v1.55"/>
+            <path d="M6.75 6.75 7.6 19a1.5 1.5 0 0 0 1.5 1.4h5.8a1.5 1.5 0 0 0 1.5-1.4l.85-12.25"/>
+            <path d="M10.5 10.5v6M13.5 10.5v6"/>
+        </symbol>
+        <symbol id="i-prev" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+            <path d="M17.5 6.2 8.8 12l8.7 5.8Z"/>
+            <path d="M7 6.2v11.6" fill="none" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-next" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+            <path d="M6.5 6.2 15.2 12 6.5 17.8Z"/>
+            <path d="M17 6.2v11.6" fill="none" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 5.5 8 12l6.5 6.5"/>
+        </symbol>
+        <symbol id="i-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.5 5.5 16 12l-6.5 6.5"/>
+        </symbol>
         <!-- ── The calculator's own keys ───────────────────────── -->
         <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <path d="M12 5v9"/>
@@ -127,8 +152,6 @@
 
     <!-- ── Home ─────────────────────────────────────────────── -->
     <main class="home" id="home">
-        <p class="eyebrow">Tartarus</p>
-
         <div class="modes glass" id="modes" role="tablist" aria-label="Timer mode">
             <span class="modes__thumb" aria-hidden="true"></span>
             <button class="mode" data-mode="stopwatch" role="tab" aria-selected="false">Stopwatch</button>
@@ -175,8 +198,8 @@
                     <button class="iconbtn" id="restart" aria-label="Restart">
                         <svg class="icon"><use id="restart-icon" href="#i-restart"></use></svg>
                     </button>
-                    <button class="iconbtn" id="audio" aria-label="Mute chime">
-                        <svg class="icon"><use id="audio-icon" href="#i-volume"></use></svg>
+                    <button class="iconbtn" id="audio" aria-label="Music" title="Music">
+                        <svg class="icon"><use id="audio-icon" href="#i-mute"></use></svg>
                     </button>
                     <button class="iconbtn" id="open-settings" aria-label="Settings">
                         <svg class="icon"><use href="#i-gear"></use></svg>
@@ -188,7 +211,7 @@
                     <button class="iconbtn" id="tool-math" aria-label="Math" title="Math">
                         <svg class="icon"><use href="#i-math"></use></svg>
                     </button>
-                    <button class="iconbtn" aria-label="Other" title="Other">
+                    <button class="iconbtn" id="tool-graph" aria-label="Graph" title="Graph">
                         <svg class="icon"><use href="#i-axes"></use></svg>
                     </button>
                     <button class="iconbtn" id="tool-notes" aria-label="Notes" title="Notes">
@@ -283,7 +306,7 @@
                 <button class="key" data-ins="√(" data-shift="∛("><i>³√▫</i>√▪</button>
                 <button class="key" data-ins="^" data-shift="⁻¹"><i>▪⁻¹</i>▪<sup>▫</sup></button>
                 <button class="key" data-ins="²" data-shift="log("><i>log</i>▪<sup>2</sup></button>
-                <button class="key" data-ins="log(" data-shift="ln("><i>ln</i>log<sub>▪</sub>▫</button>
+                <button class="key" data-ins="log(▯,)" data-shift="ln("><i>ln</i>log<sub>▪</sub>▫</button>
 
                 <button class="key" data-ins="Ans">Ans</button>
                 <button class="key" data-ins="sin(" data-shift="sin⁻¹("><i>sin⁻¹</i>sin</button>
@@ -320,10 +343,53 @@
                 <button class="key key--go" data-cmd="exe" data-altcmd="approx"><i>≈</i>EXE</button>
             </div>
         </div>
+        <span class="card__grab" id="calc-grab" aria-hidden="true"></span>
+    </section>
+
+    <!-- ── Graph (the Graph tool) ───────────────────────────────
+         A plane and the lines drawn on it: the expressions down one side,
+         the plot on the other. Each row carries its own ink, and the dot
+         beside it takes the line off the plane without giving up the
+         typing. A row that reads `a = 3` grows a slider. -->
+    <section class="card graph glass" id="graph" hidden aria-label="Graph">
+        <header class="card__head">
+            <span class="grip" aria-hidden="true"></span>
+            <button class="card__close" id="graph-close" aria-label="Close graph">
+                <svg class="icon"><use href="#i-close"></use></svg>
+            </button>
+        </header>
+
+        <div class="graph__body">
+            <div class="graph__side">
+                <ul class="graph__list" id="graph-list"></ul>
+                <button class="graph__add" id="graph-add">
+                    <svg class="icon"><use href="#i-plus"></use></svg>Expression
+                </button>
+            </div>
+
+            <div class="graph__plot" id="graph-plot">
+                <canvas class="graph__plane" id="graph-plane"></canvas>
+                <p class="graph__at" id="graph-at" aria-live="off"></p>
+                <div class="graph__view">
+                    <button class="iconbtn" id="graph-in" aria-label="Zoom in">
+                        <svg class="icon"><use href="#i-plus"></use></svg>
+                    </button>
+                    <button class="iconbtn" id="graph-out" aria-label="Zoom out">
+                        <svg class="icon"><use href="#i-minus"></use></svg>
+                    </button>
+                    <button class="iconbtn" id="graph-home" aria-label="Reset the view">
+                        <svg class="icon"><use href="#i-home"></use></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <span class="card__grab" id="graph-grab" aria-hidden="true"></span>
     </section>
 
     <!-- ── Notes (the Notes tool) ────────────────────────────────
-         A plain sheet, kept between sessions. -->
+         A pad of sheets rather than one, kept between sessions. The strip
+         under the head turns the pages: a sheet is named by its own first
+         line, so there is nothing extra to fill in. -->
     <section class="card notes glass" id="notes" hidden aria-label="Notes">
         <header class="card__head">
             <span class="grip" aria-hidden="true"></span>
@@ -331,8 +397,70 @@
                 <svg class="icon"><use href="#i-close"></use></svg>
             </button>
         </header>
+
+        <div class="notes__pages">
+            <button class="notes__step" id="page-prev" aria-label="Previous page">
+                <svg class="icon"><use href="#i-left"></use></svg>
+            </button>
+            <p class="notes__title" id="page-title" aria-live="polite">Untitled</p>
+            <span class="notes__count" id="page-count">1/1</span>
+            <button class="notes__step" id="page-next" aria-label="Next page">
+                <svg class="icon"><use href="#i-right"></use></svg>
+            </button>
+            <button class="notes__step notes__step--edge" id="page-new" aria-label="New page" title="New page">
+                <svg class="icon"><use href="#i-plus"></use></svg>
+            </button>
+            <button class="notes__step" id="page-drop" aria-label="Delete this page" title="Delete this page">
+                <svg class="icon"><use href="#i-bin"></use></svg>
+            </button>
+        </div>
+
         <textarea class="notes__sheet" id="notes-sheet" spellcheck="false"
                   placeholder="Anything worth keeping."></textarea>
+        <span class="card__grab" id="notes-grab" aria-hidden="true"></span>
+    </section>
+
+    <!-- ── Music (the speaker) ──────────────────────────────────
+         A thin tube rather than a card: the playlist between its arrows,
+         the three keys, what is playing, and how far in. It fills along
+         its lower edge as the track runs, the way the island does. -->
+    <section class="card music glass" id="music" hidden aria-label="Music">
+        <button class="music__step" id="list-prev" aria-label="Previous playlist">
+            <svg class="icon"><use href="#i-left"></use></svg>
+        </button>
+        <p class="music__name" id="list-name" aria-live="polite">Cozy</p>
+        <button class="music__step" id="list-next" aria-label="Next playlist">
+            <svg class="icon"><use href="#i-right"></use></svg>
+        </button>
+
+        <button class="music__key" id="track-prev" aria-label="Previous track">
+            <svg class="icon"><use href="#i-prev"></use></svg>
+        </button>
+        <button class="music__key music__key--go" id="track-play" aria-label="Play">
+            <svg class="icon"><use id="play-icon" href="#i-play"></use></svg>
+        </button>
+        <button class="music__key" id="track-next" aria-label="Next track">
+            <svg class="icon"><use href="#i-next"></use></svg>
+        </button>
+
+        <p class="music__now">
+            <span class="music__title" id="track-title">—</span>
+            <span class="music__by" id="track-by"></span>
+        </p>
+
+        <p class="music__clock">
+            <span class="music__at" id="track-at">0:00</span><span id="track-len">0:00</span>
+        </p>
+
+        <button class="music__shut" id="music-close" aria-label="Stop the music">
+            <svg class="icon"><use href="#i-close"></use></svg>
+        </button>
+
+        <!-- The strip that scrubs, and the line it moves: the strip comes
+             first so reaching for it can thicken the line. -->
+        <input type="range" class="music__seek" id="seek" min="0" max="1000" step="1" value="0"
+               aria-label="Seek">
+        <span class="music__line" id="music-line" aria-hidden="true"></span>
     </section>
 
     <!-- ── Focus mode ───────────────────────────────────────── -->
@@ -402,6 +530,12 @@
                     </label>
 
                     <label class="switch">
+                        <input type="checkbox" id="opt-still">
+                        <span class="switch__track"><span class="switch__knob"></span></span>
+                        <span class="switch__text">Low detail background</span>
+                    </label>
+
+                    <label class="switch">
                         <input type="checkbox" id="opt-sound" checked>
                         <span class="switch__track"><span class="switch__knob"></span></span>
                         <span class="switch__text">Chime when a block ends</span>
@@ -429,6 +563,8 @@
     <canvas id="cursor-trail" aria-hidden="true"></canvas>
 
     <script src="/static/timer.js" defer></script>
+    <script src="/static/graph.js" defer></script>
+    <script src="/static/music.js" defer></script>
     <script src="/static/cursor.js" defer></script>
 </body>
 </html>

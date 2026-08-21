@@ -27,7 +27,8 @@
     --glass-on: rgba(255, 255, 255, 0.16);
     --line: rgba(255, 255, 255, 0.22);
     --line-strong: rgba(255, 255, 255, 0.42);
-    --blur: blur(1.4vmin) saturate(150%);
+    --blur-r: 1.4vmin; /* the frost's radius, thinned while a pane arrives */
+    --blur: blur(var(--blur-r)) saturate(150%);
     --shadow:
         0 0.2vmin 0.8vmin rgba(0, 0, 0, 0.10),
         0 1.2vmin 3vmin rgba(0, 0, 0, 0.16),
@@ -62,6 +63,31 @@
 *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 [hidden] { display: none !important; }
+
+/* ── Coming into view ─────────────────────────────────────────
+   Glass cannot be faded. An element whose own opacity is under 1 is drawn
+   as a group and then composited over the very room it filtered, so the
+   frost is mixed back into the sharp picture behind it. Half way through a
+   fade a pane is not half frosted — it is a sheet of clear film you can
+   read the window frames through — and the glass only turns up in the last
+   few hundredths, all at once.
+
+   So nothing that frosts fades. `--in` runs 0 → 1 in opacity's place and
+   the pane is built out of it: the wash, the rim and the blur all thicken
+   together while the pane itself stays fully opaque. Only the contents ride
+   it as plain opacity, which they can afford — they have no backdrop of
+   their own to lose. Written `var(--in, 1)` throughout, so a browser that
+   cannot register the property simply gets everything, fully arrived. */
+
+@property --in {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 1;
+}
+
+/* Early, and with no specificity of its own, so anything with an opacity
+   to keep — a handle resting at 0.4, a shut drawer — still keeps it. */
+:where(.home, .hud, .card, .modal__card, .zen, .glass) > *:not(.glass) { opacity: var(--in, 1); }
 
 html {
     /* 14px on a phone → 18px on a large desktop, everything follows */
@@ -100,11 +126,11 @@ body {
 /* ── Shared glass surface ─────────────────────────────────── */
 
 .glass {
-    background: var(--glass);
-    border: 0.15vmin solid var(--line);
+    background: color-mix(in srgb, var(--glass) calc(var(--in, 1) * 100%), transparent);
+    border: 0.15vmin solid color-mix(in srgb, var(--line) calc(var(--in, 1) * 100%), transparent);
     border-radius: var(--r-lg);
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: blur(calc(var(--blur-r) * var(--in, 1))) saturate(calc(100% + 50% * var(--in, 1)));
+    -webkit-backdrop-filter: blur(calc(var(--blur-r) * var(--in, 1))) saturate(calc(100% + 50% * var(--in, 1)));
     box-shadow: var(--shadow);
 }
 
@@ -120,16 +146,7 @@ body {
     min-height: 100dvh;
     padding: max(var(--pad), env(safe-area-inset-top)) var(--pad);
     text-align: center;
-    transition: opacity 0.5s var(--ease);
-}
-
-.eyebrow {
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.42em;
-    text-indent: 0.42em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+    transition: --in 0.5s var(--ease);
 }
 
 .hint {
@@ -164,7 +181,7 @@ body {
     transition: left 0.45s var(--spring), width 0.45s var(--spring), opacity 0.3s var(--ease);
 }
 
-.modes.is-set .modes__thumb { opacity: 1; }
+.modes.is-set .modes__thumb { opacity: var(--in, 1); }
 
 .mode {
     position: relative;
@@ -194,7 +211,7 @@ body {
     transition: opacity 0.4s var(--ease), transform 0.4s var(--spring);
 }
 
-.home__actions.is-ready { opacity: 1; transform: none; pointer-events: auto; }
+.home__actions.is-ready { opacity: var(--in, 1); transform: none; pointer-events: auto; }
 
 /* ── Buttons ──────────────────────────────────────────────── */
 
@@ -242,15 +259,19 @@ body {
                 border-color 0.3s var(--ease), color 0.3s var(--ease), box-shadow 0.3s var(--ease);
 }
 
+/* The icon grows, not the button. A drawer is clipped to exactly one
+   column wide, so a box that grew on hover would have its own edge
+   sliced off; nothing inside it can. */
 .iconbtn:hover {
     background: var(--glass-hover);
     border-color: var(--line-strong);
     color: var(--ink);
     box-shadow: var(--shadow-lift);
-    transform: scale(1.04);
 }
 
-.iconbtn:active { transform: scale(0.97); }
+.iconbtn .icon { transition: transform 0.3s var(--ease); }
+.iconbtn:hover .icon { transform: scale(1.12); }
+.iconbtn:active { transform: scale(0.97); } /* shrinking never touches an edge */
 .iconbtn.is-running { border-color: rgba(168, 226, 196, 0.45); color: var(--accent); }
 .iconbtn.is-on { border-color: rgba(168, 226, 196, 0.45); color: var(--accent); background: var(--glass-on); }
 .iconbtn.is-off { color: var(--ink-faint); }
@@ -275,12 +296,13 @@ body {
     top: max(var(--pad), env(safe-area-inset-top));
     left: max(var(--pad), env(safe-area-inset-left));
     z-index: 10;
-    opacity: 0;
+    box-shadow: none;
+    --in: 0;
     touch-action: none; /* the island is dragged, not scrolled */
-    transition: opacity 0.5s var(--ease);
+    transition: --in 0.5s var(--ease), box-shadow 0.5s var(--ease);
 }
 
-.hud.is-ready { opacity: 1; }
+.hud.is-ready { --in: 1; box-shadow: var(--shadow); }
 
 /* Once dragged, a card is placed by percentage of the viewport, so it keeps
    its spot when the window resizes or the phone rotates. */
@@ -291,6 +313,10 @@ body {
     right: auto;
     transform: none;
 }
+
+/* A scaled card grows from its own top-left corner, so where it was put
+   stays where it is. */
+.card.is-placed { transform: scale(var(--zoom, 1)); transform-origin: top left; }
 
 .hud__box {
     display: flex;
@@ -408,13 +434,41 @@ body {
     max-height: calc(100dvh - 2 * var(--pad));
     overflow-y: auto;
     padding: var(--gap);
-    opacity: 0;
-    transform: translate(-50%, -50%);
+    box-shadow: none;
+    --in: 0;
+    transform: translate(-50%, -50%) scale(var(--zoom, 1));
     scrollbar-width: thin;
-    transition: opacity 0.35s var(--ease);
+    transition: --in 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
 
-.card.is-ready { opacity: 1; }
+.card.is-ready { --in: 1; box-shadow: var(--shadow); }
+
+/* ── Sizing a card ────────────────────────────────────────────
+   Two ways to grow, one corner. Notes and the graph take whatever shape
+   they are pulled into; the calculator, whose face has one shape, is
+   scaled by `--zoom` in the transform above instead. */
+
+.card.is-sized { width: var(--w); height: var(--h); }
+
+.card__grab {
+    position: sticky; /* stays in the corner of a card scrolled inside */
+    bottom: 0;
+    align-self: flex-end;
+    width: 0.9rem;
+    height: 0.9rem;
+    margin: calc(-1 * var(--gap) - 0.9rem) -0.25rem -0.3rem 0;
+    background: repeating-linear-gradient(-45deg,
+        var(--line-strong) 0 0.075rem, transparent 0.075rem 0.28rem);
+    -webkit-mask-image: linear-gradient(-45deg, #000 42%, transparent 58%);
+    mask-image: linear-gradient(-45deg, #000 42%, transparent 58%);
+    opacity: calc(0.4 * var(--in, 1));
+    cursor: nwse-resize;
+    touch-action: none;
+    transition: opacity 0.3s var(--ease);
+}
+
+.card:hover .card__grab,
+.card.is-sizing .card__grab { opacity: var(--in, 1); }
 
 /* Picked up by its head alone, so a card too tall for the screen can still
    be scrolled by touch. */
@@ -449,7 +503,23 @@ body {
    control block six columns wide holding the cursor cross and the page
    rocker, six columns of function keys, then five wider number keys. */
 
-.calc { width: min(94vw, 21rem); }
+/* The face is never scrolled: it is scaled instead, so the whole of it is
+   always on the card, however short the window is. The corner gets its
+   own strip along the foot, so it can never take a press meant for EXE
+   and is always in the same place — the bottom right of the face. */
+.calc {
+    width: min(94vw, 21rem);
+    max-height: none;
+    overflow: visible;
+    padding-bottom: 1.35rem; /* the corner's own strip, clear of EXE */
+}
+
+.calc .card__grab {
+    position: absolute;
+    right: 0.28rem;
+    bottom: 0.2rem;
+    margin: 0;
+}
 
 /* ── Its screen ─────────────────────────────────────────────── */
 
@@ -536,6 +606,14 @@ body {
 
 .frac > span { padding: 0 0.18em; }
 .frac > span:first-child { border-bottom: 0.07em solid currentColor; }
+
+/* And a logarithm carries its base low and small, the way the key that
+   inserts one has it printed on its face. */
+.calc__work sub, .calc__cell sub {
+    font-size: 0.68em;
+    vertical-align: -0.28em;
+    letter-spacing: 0;
+}
 
 /* ── Its tables ─────────────────────────────────────────────── */
 
@@ -777,15 +855,367 @@ body {
 .key--lit { color: rgba(168, 226, 196, 0.5); border-color: rgba(168, 226, 196, 0.22); }
 .key--go { color: var(--ink); }
 
+/* ── Graph ────────────────────────────────────────────────────
+   A plane, and the lines drawn on it. The expressions sit down one side
+   of the card and the plot fills the other; on a narrow screen the plane
+   comes first and the typing sits under it. Every formula is set in the
+   same monospace as the clock, so a row reads as something typed. */
+
+.graph { width: min(94vw, 38rem); }
+
+.graph__body {
+    /* One height for both columns: a long list scrolls inside it rather
+       than stretching the card down the screen. Sized by hand, the plane
+       becomes whatever height is left over instead. */
+    --plane: min(20rem, 46dvh);
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+    gap: var(--gap);
+}
+
+.graph__side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: var(--plane);
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.graph__list { display: flex; flex-direction: column; gap: 0.3rem; list-style: none; }
+
+.card.is-sized .graph__body { --plane: 100%; }
+
+/* ── A row ──────────────────────────────────────────────────── */
+
+.expr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* The ink the row is drawn in, and the switch that takes it off the
+   plane: a filled dot while the line is up, an empty one once it is
+   not — the same read as the mute key. */
+.expr__ink {
+    width: 0.95rem;
+    height: 0.95rem;
+    border: 0.3vmin solid var(--c);
+    border-radius: 50%;
+    background: var(--c);
+    transition: background 0.3s var(--ease), filter 0.3s var(--ease);
+}
+
+/* Brighter rather than bigger: the list scrolls, and the dot sits on its
+   left edge with nothing to spare. */
+.expr__ink:hover { filter: brightness(1.25); }
+.expr.is-off .expr__ink { background: transparent; }
+
+.expr__line {
+    min-width: 0;
+    padding: 0.4rem 0.5rem;
+    border: 0.15vmin solid rgba(255, 255, 255, 0.10);
+    border-radius: var(--r);
+    background: rgba(255, 255, 255, 0.045);
+    font-family: var(--font-time);
+    font-size: 0.75rem;
+    color: var(--ink);
+    transition: border-color 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+.expr__line:focus { outline: none; border-color: var(--line-strong); background: var(--glass-hover); }
+.expr__line::placeholder { color: var(--ink-faint); }
+
+/* ── A line, set ──────────────────────────────────────────────
+   The same box as the field it stands in for, so swapping between the
+   writing and what it means moves nothing on the row. Numbers upright,
+   letters leaning, function names upright beside them — maths as it is
+   printed rather than as it is typed. */
+
+.expr__math {
+    display: none;
+    align-items: center;
+    min-width: 0;
+    min-height: 1.85rem;
+    padding: 0.25rem 0.5rem;
+    border: 0.15vmin solid rgba(255, 255, 255, 0.10);
+    border-radius: var(--r);
+    background: rgba(255, 255, 255, 0.045);
+    font-size: 0.8rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    color: var(--ink);
+    cursor: text;
+}
+
+.expr__math::-webkit-scrollbar { display: none; }
+.expr__math:focus-visible { outline: 0.25vmin solid var(--line-strong); outline-offset: 0.1vmin; }
+
+/* Which of the two the row is showing */
+.expr.is-math:not(.is-typing) .expr__math { display: flex; }
+.expr.is-math:not(.is-typing) .expr__line { display: none; }
+.expr.is-bad .expr__math { border-color: rgba(255, 127, 116, 0.45); }
+
+.mth__row { display: inline-flex; align-items: center; }
+.mth__num { font-variant-numeric: tabular-nums; }
+.mth__var { font-style: italic; padding-right: 0.02em; }
+.mth__fn { padding-right: 0.12em; }
+.mth__op { padding: 0 0.22em; color: var(--ink-soft); }
+.mth__grp { display: inline-flex; align-items: center; }
+
+/* A fraction is stacked over its bar, and takes the height of both */
+.mth__frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0.15em;
+    font-size: 0.92em;
+    line-height: 1.1;
+}
+
+.mth__top { padding: 0 0.2em 0.05em; border-bottom: 0.1em solid currentColor; }
+.mth__bot { padding: 0.05em 0.2em 0; }
+
+/* A root and the bar that reaches over what it takes */
+.mth__root { display: inline-flex; align-items: stretch; }
+.mth__sign { display: flex; align-items: flex-end; font-size: 1.15em; line-height: 1; }
+.mth__of { padding: 0.08em 0.15em 0 0.1em; border-top: 0.08em solid currentColor; margin-top: 0.12em; }
+
+.expr__math sup { font-size: 0.72em; align-self: flex-start; line-height: 1.1; }
+
+/* A line that will not read says so quietly, and keeps what was typed. */
+.expr.is-bad .expr__line { border-color: rgba(255, 127, 116, 0.45); }
+
+/* The row's own dropper, out of the way until the row is being worked in */
+.expr__drop {
+    display: flex;
+    border: 0;
+    background: transparent;
+    color: var(--ink-faint);
+    opacity: 0;
+    transition: opacity 0.3s var(--ease), color 0.3s var(--ease);
+}
+
+.expr__drop .icon { width: 0.85rem; height: 0.85rem; }
+.expr:hover .expr__drop,
+.expr:focus-within .expr__drop { opacity: 1; }
+.expr__drop:hover { color: var(--ink); }
+
+/* `a = 3` grows a slider, and dragging it writes the number back into
+   the line — so what is typed and what is drawn stay the same thing. */
+.expr__dial { grid-column: 2 / -1; height: 1.1rem; margin-top: -0.15rem; }
+.expr__dial::-webkit-slider-thumb { width: 0.85rem; height: 0.85rem; }
+.expr__dial::-moz-range-thumb { width: 0.85rem; height: 0.85rem; }
+
+/* ── The inks ─────────────────────────────────────────────────
+   What opens under a row's dot: the six, a colour of the row's own, and
+   the switch that takes its line off the plane. */
+
+.inks {
+    position: absolute;
+    z-index: 3;
+    /* Denser than the card it opens over, so the swatches read as a layer
+       above the row rather than through it. */
+    background: rgba(10, 16, 14, 0.72);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+    padding: 0.45rem;
+    border-radius: var(--r);
+}
+
+.inks__one,
+.inks__own {
+    display: block;
+    width: 1.15rem;
+    height: 1.15rem;
+    padding: 0;
+    border: 0.15vmin solid rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
+    background: var(--c);
+    transition: filter 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.inks__one:hover,
+.inks__own:hover { filter: brightness(1.25); }
+
+/* The one the row is wearing wears a ring, drawn inside so nothing has to
+   grow to show it. */
+.inks__one.is-at,
+.inks__own.is-at { box-shadow: inset 0 0 0 0.16rem rgba(0, 0, 0, 0.55); }
+
+/* Every other colour: the swatch says as much, and the picker itself sits
+   invisibly over it. */
+.inks__own {
+    position: relative;
+    overflow: hidden;
+    background: conic-gradient(#ff7f74, #ffb15e, #8ad98f, #5fd8cf, #6fb2ff, #c79bff, #ff7f74);
+}
+
+.inks__own input {
+    position: absolute;
+    inset: -25%;
+    width: 150%;
+    height: 150%;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.inks__off {
+    grid-column: 1 / -1;
+    padding: 0.3rem;
+    border: 0.15vmin solid var(--line);
+    border-radius: var(--r);
+    background: transparent;
+    font: inherit;
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    transition: color 0.3s var(--ease), background 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.inks__off:hover { color: var(--ink); background: var(--glass-hover); border-color: var(--line-strong); }
+
+.graph__add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.4rem;
+    border: 0.15vmin dashed rgba(255, 255, 255, 0.18);
+    border-radius: var(--r);
+    background: transparent;
+    font: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    transition: color 0.3s var(--ease), border-color 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+.graph__add .icon { width: 0.8rem; height: 0.8rem; }
+.graph__add:hover { color: var(--ink); border-color: var(--line-strong); background: var(--glass); }
+
+/* ── The plane ──────────────────────────────────────────────── */
+
+/* Darker than the card it sits in — a plane a fine gridline can be seen
+   on, whatever the backdrop is doing behind the glass. */
+.graph__plot {
+    position: relative;
+    height: var(--plane);
+    border: 0.15vmin solid rgba(255, 255, 255, 0.10);
+    border-radius: var(--r);
+    background: rgba(6, 12, 10, 0.32);
+    overflow: hidden;
+}
+
+.graph__plane {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none; /* the plane is dragged and pinched, not scrolled */
+}
+
+/* Where the pointer is, in the plane's own numbers. */
+.graph__at {
+    position: absolute;
+    left: 0.45rem;
+    bottom: 0.35rem;
+    font-family: var(--font-time);
+    font-size: 0.62rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+    pointer-events: none;
+}
+
+.graph__view {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    opacity: 0.35;
+    transition: opacity 0.3s var(--ease);
+}
+
+.graph__plot:hover .graph__view,
+.graph__view:focus-within { opacity: 1; }
+
+.graph__view .iconbtn {
+    min-width: 1.85rem;
+    min-height: 1.85rem;
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+}
+
+.graph__view .icon { width: 0.9rem; height: 0.9rem; }
+
 /* ── Notes ────────────────────────────────────────────────────
    A sheet to think on. Dragged by the same head; the sheet itself can be
    pulled taller, and the card re-places itself as it grows. */
 
-.notes { width: min(92vw, 24rem); }
+.notes { width: min(92vw, 24rem); height: min(56vh, 32rem); }
+
+/* The strip that turns the pages: arrows either side of the name the
+   sheet gives itself, then the two that add and drop one. */
+.notes__pages {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.notes__step {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink-faint);
+    transition: color 0.3s var(--ease), background 0.3s var(--ease), transform 0.2s var(--ease);
+}
+
+.notes__step:hover { color: var(--ink); background: var(--glass-hover); }
+.notes__step:active { transform: scale(0.92); }
+.notes__step .icon { width: 0.8rem; height: 0.8rem; }
+
+/* A rule's worth of air before the keys that change the pad itself,
+   rather than which page of it is open. */
+.notes__step--edge { margin-left: 0.3rem; border-left: 0.15vmin solid var(--line); border-radius: 0; padding-left: 0.35rem; width: auto; }
+
+.notes__title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.75rem;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-soft);
+}
+
+.notes__count {
+    flex: none;
+    font-family: var(--font-time);
+    font-size: 0.6rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+}
 
 .notes__sheet {
-    min-height: 40vh;
-    max-height: 70vh;
+    flex: 1;
+    min-height: 0;
     padding: 0.7rem 0.85rem;
     border: 0.15vmin solid rgba(255, 255, 255, 0.10);
     border-radius: var(--r);
@@ -794,11 +1224,140 @@ body {
     font-size: 0.9rem;
     line-height: 1.75;
     color: var(--ink);
-    resize: vertical;
+    resize: none; /* the card's own corner does this now */
     scrollbar-width: thin;
 }
 
 .notes__sheet::placeholder { color: var(--ink-faint); }
+
+/* ── Music ────────────────────────────────────────────────────
+   A tube rather than a card: one row, everything on it, picked up
+   anywhere that is not a key. It fills along its lower edge as the track
+   runs — the same line the island wears while a block runs down. */
+
+.music {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.3rem;
+    width: min(94vw, 31rem);
+    max-height: none;
+    padding: 0.32rem 0.5rem;
+    border-radius: 10rem;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.music.is-dragging { cursor: grabbing; }
+
+/* The keys sit over the scrubbing strip that runs under the whole tube */
+.music__step,
+.music__key,
+.music__shut {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink-faint);
+    transition: color 0.3s var(--ease), background 0.3s var(--ease), transform 0.2s var(--ease);
+}
+
+.music__step:hover,
+.music__key:hover,
+.music__shut:hover { color: var(--ink); background: var(--glass-hover); }
+
+.music__step:active,
+.music__key:active { transform: scale(0.92); }
+
+.music__step { width: 1.35rem; height: 1.35rem; }
+.music__step .icon { width: 0.8rem; height: 0.8rem; }
+
+.music__key { width: 1.7rem; height: 1.7rem; color: var(--ink-soft); }
+.music__key .icon { width: 0.85rem; height: 0.85rem; }
+
+/* The one key reached for, so the one given the light — and the accent
+   while it is playing, like the speaker it was opened from. */
+.music__key--go { width: 1.95rem; height: 1.95rem; background: var(--glass); color: var(--ink); }
+.music__key--go .icon { width: 0.95rem; height: 0.95rem; }
+.music__key--go.is-running { color: var(--accent); }
+
+.music__shut { width: 1.35rem; height: 1.35rem; margin-left: 0.1rem; }
+.music__shut .icon { width: 0.75rem; height: 0.75rem; }
+
+.music__name {
+    flex: none;
+    max-width: 5.5rem;
+    overflow: hidden;
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-indent: 0.18em;
+    text-align: center;
+    text-transform: uppercase;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-faint);
+}
+
+/* What is playing takes whatever room is left, and is cut rather than
+   allowed to push the clock off the end. */
+.music__now {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    margin-left: 0.35rem;
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink);
+}
+
+.music__by { color: var(--ink-faint); }
+.music__by::before { content: " · "; }
+
+.music__clock {
+    flex: none;
+    font-family: var(--font-time);
+    font-size: 0.6rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+}
+
+.music__at::after { content: " / "; }
+
+/* The line, and the strip that scrubs it: invisible until it is reached
+   for, then a shade thicker so there is something to take hold of. */
+.music__line {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: calc(var(--p, 0) * 100%);
+    height: 0.12rem;
+    background: linear-gradient(90deg, transparent, var(--accent));
+    transition: height 0.25s var(--ease);
+    pointer-events: none;
+}
+
+.music__seek {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 0.7rem;
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    opacity: 0;
+}
+
+.music__seek:hover ~ .music__line,
+.music__seek:focus-visible ~ .music__line { height: 0.26rem; }
 
 /* ── Focus mode ───────────────────────────────────────────── */
 
@@ -811,14 +1370,14 @@ body {
     justify-content: center;
     gap: clamp(0.5rem, 2vh, 1.25rem);
     z-index: 60;
-    background: rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(0.6vmin);
-    -webkit-backdrop-filter: blur(0.6vmin);
-    opacity: 0;
-    transition: opacity 0.5s var(--ease);
+    background: rgba(0, 0, 0, calc(0.35 * var(--in, 1)));
+    backdrop-filter: blur(calc(0.6vmin * var(--in, 1)));
+    -webkit-backdrop-filter: blur(calc(0.6vmin * var(--in, 1)));
+    --in: 0;
+    transition: --in 0.5s var(--ease);
 }
 
-.zen.is-ready { opacity: 1; }
+.zen.is-ready { --in: 1; }
 
 .zen__phase {
     font-size: 0.75rem;
@@ -868,13 +1427,15 @@ body {
     max-height: 86dvh;
     padding: clamp(1.1rem, 3vh, 2rem);
     gap: clamp(0.9rem, 2.5vh, 1.5rem);
-    opacity: 0;
+    box-shadow: none;
+    --in: 0;
     transform: translateY(2vh) scale(0.98);
-    transition: opacity 0.35s var(--ease), transform 0.35s var(--spring);
+    transition: --in 0.35s var(--ease), box-shadow 0.35s var(--ease),
+                transform 0.35s var(--spring);
 }
 
 .modal.is-ready .modal__scrim { opacity: 1; }
-.modal.is-ready .modal__card { opacity: 1; transform: none; }
+.modal.is-ready .modal__card { --in: 1; box-shadow: var(--shadow); transform: none; }
 
 .modal__head {
     display: flex;
@@ -1037,6 +1598,33 @@ body:not(.trail-on) #cursor-trail { display: none; }
     .hud__controls { flex-direction: row; justify-content: center; }
     .modes { flex-wrap: wrap; }
     .mode { flex: 1 1 30%; }
+
+    /* Stacked, a card is as tall as its content: a height pulled out on a
+       larger screen would only push the plane off the bottom. And a width
+       is a share of the viewport, so one narrowed on a desktop would come
+       out too narrow to read here — it may be wider than the default, but
+       never thinner. */
+    .card.is-sized { height: auto; min-width: min(92vw, 24rem); }
+
+    /* Nor may a face scaled up on a desktop run off the side here. It can
+       still be made smaller on a phone; it just cannot be made bigger. */
+    .card.is-scaled { transform: translate(-50%, -50%) scale(min(var(--zoom, 1), 1)); }
+    .card.is-scaled.is-placed { transform: scale(min(var(--zoom, 1), 1)); }
+    .card.is-sized .graph__body { --plane: min(20rem, 40dvh); }
+    .notes { height: auto; }
+    .notes__sheet { min-height: 40vh; }
+
+    /* The tube keeps its row on a phone by dropping what it can spare:
+       who made the track, and how far in it is. */
+    .music__by,
+    .music__at { display: none; }
+    .music__name { max-width: 4.5rem; }
+
+    /* Too narrow for two columns: the plane goes on top, and the typing
+       under it where the keyboard will not cover it. */
+    .graph__body { grid-template-columns: minmax(0, 1fr); }
+    .graph__plot { order: -1; }
+    .graph__side { max-height: 30vh; }
 
     /* The row is stacked here, so the extras column opens downwards */
     .hud__drawer {

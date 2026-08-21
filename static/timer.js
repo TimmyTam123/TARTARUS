@@ -14,13 +14,13 @@ const el = {
     tools: $('tools'), toolpanel: $('toolpanel'),
     toolMath: $('tool-math'), toolNotes: $('tool-notes'),
     notes: $('notes'), notesSheet: $('notes-sheet'),
+    pageTitle: $('page-title'), pageCount: $('page-count'),
     calc: $('calc'), calcPad: $('calc-pad'), calcEntry: $('calc-entry'), calcOut: $('calc-out'),
     calcWork: $('calc-work'), calcMenu: $('calc-menu'), calcTitle: $('calc-title'),
     calcList: $('calc-list'), calcUnit: $('calc-unit'), calcFmt: $('calc-fmt'), calcWrap: $('calc-wrap'),
     calcApp: $('calc-app'), calcAsk: $('calc-ask'), calcGrid: $('calc-grid'),
     calcHead: $('calc-head'), calcBody: $('calc-body'), calcCell: $('calc-cell'),
     more: $('more'), restart: $('restart'), restartIcon: $('restart-icon'),
-    audio: $('audio'), audioIcon: $('audio-icon'),
     zen: $('zen'), zenPhase: $('zen-phase'), zenTime: $('zen-time'),
     setup: $('setup'), setupTitle: $('setup-title'), setupPomodoro: $('setup-pomodoro'),
     setupCountdown: $('setup-countdown'), setupSave: $('setup-save'),
@@ -28,7 +28,8 @@ const el = {
     breakMinutes: $('break-minutes'), breakOut: $('break-out'),
     targetH: $('target-h'), targetM: $('target-m'), targetS: $('target-s'),
     settings: $('settings'), dim: $('dim'), dimOut: $('dim-out'),
-    sound: $('opt-sound'), trail: $('opt-trail'), todayTotal: $('today-total'),
+    sound: $('opt-sound'), trail: $('opt-trail'), still: $('opt-still'),
+    todayTotal: $('today-total'),
     title: $('title'), backdrop: $('backdrop'),
 };
 
@@ -42,7 +43,8 @@ const COPY = {
 
 const prefs = {
     mode: null, focusMin: 25, breakMin: 5, targetMs: 45 * MIN,
-    dim: 30, sound: true, trail: true, hud: null, calc: null, notes: null, jotting: '',
+    dim: 30, sound: true, trail: true, still: false, hud: null, calc: null, notes: null, graph: null,
+    music: null, pages: null, page: 0, plot: null, tune: null, sized: null,
     ...read('tartarus:prefs', {}),
 };
 
@@ -82,12 +84,21 @@ const hiding = new WeakMap();
    one thing that knows the difference. */
 const showing = (node) => !node.hidden && !hiding.has(node);
 
+/* A pane that has only just stopped being `hidden` has no style behind it
+   to leave from, so its arrival would have nothing to run over and would
+   simply be there. Reading a value back settles the frame it is standing
+   in first, and the change that follows has somewhere to come from. */
+function settled(node) {
+    void node.offsetHeight; /* reading a measurement is what forces the work */
+    return node;
+}
+
 function reveal(node, on, ms = 400) {
     clearTimeout(hiding.get(node));
     hiding.delete(node);
     if (on) {
         node.hidden = false;
-        requestAnimationFrame(() => node.classList.add('is-ready'));
+        requestAnimationFrame(() => settled(node).classList.add('is-ready'));
     } else {
         node.classList.remove('is-ready');
         hiding.set(node, setTimeout(() => { node.hidden = true; hiding.delete(node); }, ms));
@@ -243,12 +254,12 @@ function startSession() {
     el.restartIcon.setAttribute('href', isStopwatch ? '#i-stop' : '#i-restart');
     el.restart.setAttribute('aria-label', isStopwatch ? 'Reset to zero' : 'Restart session');
 
-    el.home.style.opacity = '0';
+    el.home.style.setProperty('--in', '0');
     setTimeout(() => {
         el.home.hidden = true;
         el.hud.hidden = false;
         applyPlace();
-        requestAnimationFrame(() => el.hud.classList.add('is-ready'));
+        requestAnimationFrame(() => settled(el.hud).classList.add('is-ready'));
         play();
     }, 450);
 }
@@ -263,7 +274,7 @@ function endSession() {
     setTimeout(() => {
         el.hud.hidden = true;
         el.home.hidden = false;
-        requestAnimationFrame(() => { el.home.style.opacity = '1'; });
+        requestAnimationFrame(() => { settled(el.home).style.setProperty('--in', '1'); });
         moveThumb();
         render();
     }, 450);
@@ -284,6 +295,7 @@ function showTools(on) {
    edge stays an edge whatever the screen does next. */
 
 const placers = [];
+const sizers = [];
 
 /* Whatever you touched last sits on top — and is what Esc closes. */
 let front = 11;
@@ -357,6 +369,99 @@ function draggable(node, key, handle) {
 const applyPlace = draggable(el.hud, 'hud');
 draggable(el.calc, 'calc', '.card__head');
 draggable(el.notes, 'notes', '.card__head');
+
+resizable(el.calc, 'calc', true); /* one shape, scaled */
+resizable(el.notes, 'notes');
+
+/* ── Sizing a card ────────────────────────────────────────────
+   The same corner on every card that can be pulled bigger, and the same
+   rule as its spot: the size is kept as a fraction of the viewport
+   rather than a pixel count, so a card keeps its share of the screen
+   when the window changes, and it is clamped to something that can still
+   be read and still fits.
+
+   The calculator is the exception. A face laid out key for key has one
+   shape, so it is scaled rather than reshaped — the whole thing grows,
+   keys, screen and printed alternates together, and the ratio is kept by
+   construction rather than by arithmetic. */
+
+function resizable(node, key, scaled) {
+    const grab = node.querySelector('.card__grab');
+    const root = () => parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+    /* A scaled face is never scrolled, so it must never stand taller than
+       the screen: the corner that would shrink it again has to stay on
+       it. The ceiling is worked out from the card's own laid-out height,
+       which a transform leaves alone — and it caps what is shown without
+       touching what was asked for, so a face sized on a tall screen comes
+       back whole on the next one. */
+    const fits = () => (node.offsetHeight ? (innerHeight * 0.96) / node.offsetHeight : 2);
+
+    const apply = () => {
+        const kept = prefs.sized?.[key];
+        if (!kept) return;
+        node.classList.add(scaled ? 'is-scaled' : 'is-sized');
+        if (scaled) node.style.setProperty('--zoom', Math.min(kept.zoom, fits()));
+        else {
+            node.style.setProperty('--w', `${(kept.w * 100).toFixed(3)}vw`);
+            node.style.setProperty('--h', `${(kept.h * 100).toFixed(3)}vh`);
+        }
+    };
+
+    let from = null;
+
+    grab.addEventListener('pointerdown', (e) => {
+        const rect = node.getBoundingClientRect();
+        from = {
+            x: e.clientX, y: e.clientY, w: rect.width, h: rect.height,
+            zoom: Number(getComputedStyle(node).getPropertyValue('--zoom')) || 1,
+        };
+        grab.setPointerCapture(e.pointerId);
+        node.classList.add('is-sizing');
+        /* Left to bubble on purpose: the card raises itself on the way
+           past, and only its head starts a drag, so the corner is safe. */
+    });
+
+    grab.addEventListener('pointermove', (e) => {
+        if (!from) return;
+        const dx = e.clientX - from.x;
+        const dy = e.clientY - from.y;
+        prefs.sized = prefs.sized ?? {};
+
+        if (scaled) {
+            /* Both ways the hand went, halved: the corner keeps up with it
+               on either axis without either one taking over. */
+            const by = ((from.w + dx) / from.w + (from.h + dy) / from.h) / 2;
+            prefs.sized[key] = { zoom: Math.max(0.55, Math.min(2, fits(), from.zoom * by)) };
+        } else {
+            const w = Math.min(innerWidth * 0.96, Math.max(13 * root(), from.w + dx));
+            const h = Math.min(innerHeight * 0.92, Math.max(9 * root(), from.h + dy));
+            prefs.sized[key] = { w: w / innerWidth, h: h / innerHeight };
+        }
+        apply();
+    });
+
+    const done = () => {
+        if (!from) return;
+        from = null;
+        node.classList.remove('is-sizing');
+        save();
+    };
+
+    grab.addEventListener('pointerup', done);
+    grab.addEventListener('pointercancel', done);
+
+    /* The card is laid out again when it is first shown, and whenever the
+       root type scales with the window; a transform never fires this, so
+       re-reading the ceiling here cannot chase its own tail. */
+    new ResizeObserver(apply).observe(node);
+    sizers.push(apply);
+    apply();
+}
+
+/* Every study card, and the switch that closes it. A tool of its own
+   file — the Graph — adds itself to this on the way in. */
+const cards = new Map([[el.calc, showCalc], [el.notes, showNotes]]);
 
 /* ── Modals ───────────────────────────────────────────────── */
 
@@ -449,22 +554,18 @@ function saveSetup() {
 const wantsTrail = matchMedia('(hover: hover) and (pointer: fine)').matches
     && !matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* The chime has two switches — the island button and the settings row —
-   so both are written from the one preference. */
-function syncSound() {
-    el.sound.checked = prefs.sound;
-    el.audioIcon.setAttribute('href', prefs.sound ? '#i-volume' : '#i-mute');
-    el.audio.setAttribute('aria-label', prefs.sound ? 'Mute chime' : 'Unmute chime');
-    el.audio.classList.toggle('is-off', !prefs.sound);
-}
+/* The chime is switched in Settings alone: the island's speaker opens the
+   music card instead. */
+function syncSound() { el.sound.checked = prefs.sound; }
 
 function applyPrefs() {
     document.documentElement.style.setProperty('--dim', prefs.dim / 100);
     el.dim.value = prefs.dim;
     el.dimOut.textContent = prefs.dim;
     el.trail.checked = prefs.trail;
-    el.notesSheet.value = prefs.jotting;
     document.body.classList.toggle('trail-on', prefs.trail && wantsTrail);
+    el.still.checked = prefs.still;
+    keepPlaying();
     syncSound();
 }
 
@@ -532,14 +633,15 @@ const shiftKey = el.calcPad.querySelector('[data-cmd="shift"]');
 
 /* ── Drawing the screen ───────────────────────────────────────
    An expression is drawn the way it is written — a fraction stacked over
-   its bar — with the caret dropped in wherever its index falls, inside a
-   numerator if that is where it sits. The same drawing serves the entry
-   line, the answer, and the key that inserts a fraction. */
+   its bar, a logarithm's base sitting low beside it — with the caret
+   dropped in wherever its index falls, inside a numerator or a base if
+   that is where it sits. One walk draws a stretch of the line and hands
+   each half it finds back to itself, so the two shapes nest as deep as
+   they are typed. */
 
 let caret = null;
 
 function draw(src, at = -1) {
-    const out = document.createDocumentFragment();
     let placed = false;
 
     /* A mixed fraction is joined by ¦, which is only ever a thin gap. */
@@ -555,26 +657,68 @@ function draw(src, at = -1) {
         return frag;
     };
 
-    const stack = (...halves) => {
-        const box = document.createElement('span');
-        box.className = 'frac';
-        box.append(...halves.map((half) => {
-            const side = document.createElement('span');
-            side.append(half);
-            return side;
-        }));
+    const wrap = (name, className, ...parts) => {
+        const box = document.createElement(name);
+        if (className) box.className = className;
+        box.append(...parts);
         return box;
     };
 
-    let i = 0;
-    for (let bar = src.indexOf('/'); bar >= 0; bar = src.indexOf('/', i)) {
-        const top = operandFrom(src, bar);
-        const low = operandTo(src, bar + 1);
-        out.append(piece(i, top), stack(piece(top, bar), piece(bar + 1, low)));
-        i = low;
+    const stack = (top, low) => wrap('span', 'frac', wrap('span', '', top), wrap('span', '', low));
+
+    /* Whichever shape comes first from `i`: a fraction bar, or a logarithm
+       with a base to lower. A tie goes to the fraction, so log(2,8)/4 is
+       the logarithm standing on the 4 rather than the other way about. */
+    const split = (i, to) => {
+        const bar = src.indexOf('/', i);
+        let frac = null;
+        if (bar >= 0 && bar < to) {
+            const top = Math.max(i, operandFrom(src, bar));
+            const low = Math.min(to, operandTo(src, bar + 1));
+            frac = { at: top, end: low, draw: () => stack(run(top, bar), run(bar + 1, low)) };
+        }
+
+        let s = src.indexOf('log(', i);
+        let parts = null;
+        while (s >= 0 && s < to && !(parts = logBase(src, s, to))) s = src.indexOf('log(', s + 4);
+        if (!parts) return frac;
+
+        const { comma, end, closed } = parts;
+        const low = {
+            at: s,
+            end: closed ? end + 1 : end,
+            draw: () => wrap('span', '', piece(s, s + 3), wrap('sub', '', run(s + 4, comma)),
+                '(', run(comma + 1, end), closed ? ')' : ''),
+        };
+        return frac && frac.at <= low.at ? frac : low;
+    };
+
+    /* A stretch of the line, drawn from one shape to the next. */
+    const run = (from, to) => {
+        const out = document.createDocumentFragment();
+        let i = from;
+        for (let cut = split(i, to); cut; cut = split(i, to)) {
+            out.append(piece(i, cut.at), cut.draw());
+            i = cut.end;
+        }
+        out.append(piece(i, to));
+        return out;
+    };
+
+    return run(0, src.length);
+}
+
+/* Where a logarithm's base and its value part company, so long as it has a
+   base worth lowering: only a comma at the top of its own brackets counts,
+   and the closing bracket may be left off the end as it may anywhere. */
+function logBase(src, s, to) {
+    let comma = -1;
+    for (let i = s + 4, depth = 1; i < to; i++) {
+        if (src[i] === '(') depth++;
+        else if (src[i] === ')' && !--depth) return comma > s + 4 ? { comma, end: i, closed: true } : null;
+        else if (src[i] === ',' && depth === 1 && comma < 0) comma = i;
     }
-    out.append(piece(i, src.length));
-    return out;
+    return comma > s + 4 ? { comma, end: to, closed: false } : null;
 }
 
 /* Where the value ending at `at` begins: a plain number, or a bracketed
@@ -583,6 +727,9 @@ function operandFrom(src, at) {
     let i = at;
     if (src[i - 1] !== ')') {
         while (i > 0 && /[\d.]/.test(src[i - 1])) i--;
+        if (i < at) return i;
+        /* A name stands in for a number, so x/y and Ans/2 have numerators. */
+        while (i > 0 && /[A-Za-zπ#]/.test(src[i - 1])) i--;
         return i;
     }
     for (let depth = 0; i > 0;) {
@@ -751,6 +898,7 @@ const MENUS = {
                 insert('Square', '²'), insert('Cube', '³'),
                 insert('Power', '^'), insert('Power Root', 'ˣ√'),
                 insert('Reciprocal', '⁻¹'),
+                insert('Logarithm(logₐb)', 'log(▯,)'),
                 insert('Logarithm(log)', 'log('), insert('Natural Logarithm', 'ln('),
                 insert('10^', '10^('), insert('e^', 'e^('),
             ],
@@ -960,8 +1108,12 @@ function calcIns(text) {
         calc.wrap = false;
         return;
     }
-    calc.entry = calc.entry.slice(0, calc.cur) + text + calc.entry.slice(calc.cur);
-    calc.cur += text.length;
+    /* A template says where the cursor lands with ▯, so the log key can
+       drop the comma in and leave you standing on the base. */
+    const stop = text.indexOf('▯');
+    const body = text.replace('▯', '');
+    calc.entry = calc.entry.slice(0, calc.cur) + body + calc.entry.slice(calc.cur);
+    calc.cur += stop < 0 ? body.length : stop;
 }
 
 function undoEntry() {
@@ -1036,8 +1188,12 @@ function evaluate(src) {
         'sinh⁻¹(': ([x]) => Math.asinh(x),
         'cosh⁻¹(': ([x]) => Math.acosh(x),
         'tanh⁻¹(': ([x]) => Math.atanh(x),
-        /* One argument is the common logarithm; two are a base and its value. */
-        'log(': ([a, b]) => (b === undefined ? Math.log10(a) : Math.log(b) / Math.log(a)),
+        /* One argument is the common logarithm; two are a base and its
+           value, and a base left out is ten either way. */
+        'log(': (args) => {
+            const [base, of] = args.length > 1 ? args : [10, args[0]];
+            return Math.log(of) / Math.log(base ?? 10);
+        },
         'ln(': ([x]) => Math.log(x),
         '√(': ([x]) => Math.sqrt(x),
         '∛(': ([x]) => Math.cbrt(x),
@@ -1131,7 +1287,8 @@ function evaluate(src) {
         if (eat('(')) { const v = expr(); eat(')'); return v; }
         if (tok.endsWith('(')) {
             i++;
-            const args = [expr()];
+            /* Only the logarithm takes an empty slot: log(,1000) has no base. */
+            const args = [tok === 'log(' && t[i] === ',' ? undefined : expr()];
             while (eat(',')) args.push(expr());
             eat(')');
             return FN[tok](args);
@@ -1623,11 +1780,65 @@ function boxTally() {
 }
 
 /* ── Notes ────────────────────────────────────────────────────
-   A sheet that outlives the session. It rides in the same preferences
-   blob, written back a moment after you stop typing rather than on every
-   keystroke. */
+   A pad of sheets that outlives the session. They ride in the same
+   preferences blob, written back a moment after you stop typing rather
+   than on every keystroke.
 
+   A sheet is named by its own first line, so a page has nothing to fill
+   in but itself — start typing and the strip above says what it is. */
+
+const pages = prefs.pages ?? [prefs.jotting ?? '']; /* one sheet, before there were many */
+delete prefs.jotting;
+/* The pad is handed straight back to the preferences, and worked in
+   place from here on: a sheet carried over from the old single one is
+   then safe on the next write, whether or not it has been opened. */
+prefs.pages = pages;
+let page = Math.min(Math.max(0, prefs.page ?? 0), pages.length - 1);
 let jotted = null;
+
+function pageName(text) {
+    const first = text.split('\n').find((line) => line.trim()) ?? '';
+    const name = first.trim().replace(/\s+/g, ' ');
+    if (!name) return 'Untitled';
+    return name.length > 30 ? `${name.slice(0, 29)}…` : name;
+}
+
+/* The strip, and the sheet under it. The sheet is only written into when
+   the page changes, so typing never fights the caret. */
+function drawPad(turned = true) {
+    el.pageTitle.textContent = pageName(pages[page]);
+    el.pageCount.textContent = `${page + 1}/${pages.length}`;
+    if (turned) el.notesSheet.value = pages[page];
+}
+
+function keepPad() {
+    prefs.page = page;
+    clearTimeout(jotted);
+    jotted = setTimeout(save, 600);
+}
+
+function turnPage(by) {
+    page = (page + by + pages.length) % pages.length;
+    drawPad();
+    keepPad();
+    el.notesSheet.focus();
+}
+
+function newPage() {
+    pages.splice(++page, 0, '');
+    drawPad();
+    keepPad();
+    el.notesSheet.focus();
+}
+
+/* Dropping the last sheet leaves a blank one: the pad is never empty. */
+function dropPage() {
+    pages.splice(page, 1);
+    if (!pages.length) pages.push('');
+    page = Math.min(page, pages.length - 1);
+    drawPad();
+    keepPad();
+}
 
 function showNotes(on) {
     reveal(el.notes, on, 350);
@@ -1636,22 +1847,38 @@ function showNotes(on) {
 }
 
 el.notesSheet.addEventListener('input', () => {
-    prefs.jotting = el.notesSheet.value;
-    clearTimeout(jotted);
-    jotted = setTimeout(save, 600);
+    pages[page] = el.notesSheet.value;
+    drawPad(false); /* the name follows the first line as it is typed */
+    keepPad();
 });
+
+$('page-prev').addEventListener('click', () => turnPage(-1));
+$('page-next').addEventListener('click', () => turnPage(1));
+$('page-new').addEventListener('click', newPage);
+$('page-drop').addEventListener('click', dropPage);
+
+drawPad();
 
 /* Esc closes the card you are working in, which is the one on top. */
 function topCard() {
-    return [el.calc, el.notes]
+    return [...cards.keys()]
         .filter(showing)
         .sort((a, b) => (+b.style.zIndex || 0) - (+a.style.zIndex || 0))[0];
 }
 
 /* ── Background video ─────────────────────────────────────── */
 
+/* Low detail holds the loop on one frame instead of dropping the room
+   altogether: nothing is decoded from then on, and the blur behind every
+   pane has something fixed to work from. A still needs a frame to be
+   still on, so a cold video is started and stopped once it is running. */
 function keepPlaying() {
-    el.backdrop.play?.().catch(() => { /* retried on the next interaction */ });
+    if (!prefs.still) {
+        el.backdrop.play?.().catch(() => { /* retried on the next interaction */ });
+        return;
+    }
+    if (el.backdrop.readyState >= 2) el.backdrop.pause();
+    else el.backdrop.play?.().then(() => el.backdrop.pause()).catch(() => {});
 }
 
 /* ── Wiring ───────────────────────────────────────────────── */
@@ -1668,7 +1895,6 @@ el.focus.addEventListener('click', enterZen);
 el.zen.addEventListener('click', exitZen);
 el.tools.addEventListener('click', () => showTools(!showing(el.toolpanel)));
 el.restart.addEventListener('click', restart);
-el.audio.addEventListener('click', () => { prefs.sound = !prefs.sound; syncSound(); save(); });
 
 $('open-settings').addEventListener('click', () => openModal(el.settings));
 
@@ -1693,6 +1919,11 @@ el.dim.addEventListener('input', () => {
 el.dim.addEventListener('change', save);
 
 el.sound.addEventListener('change', () => { prefs.sound = el.sound.checked; syncSound(); save(); });
+el.still.addEventListener('change', () => {
+    prefs.still = el.still.checked;
+    keepPlaying();
+    save();
+});
 el.trail.addEventListener('change', () => {
     prefs.trail = el.trail.checked;
     document.body.classList.toggle('trail-on', prefs.trail && wantsTrail);
@@ -1724,7 +1955,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (open) closeModal(open);
         else if (card === el.calc && calc.menu.length) tapKey({ cmd: 'back' });
-        else if (card) (card === el.calc ? showCalc : showNotes)(false);
+        else if (card) cards.get(card)(false);
         else if (showing(el.toolpanel)) showTools(false);
         else if (showing(el.zen)) exitZen();
         return;
@@ -1736,7 +1967,11 @@ document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'f') (el.zen.hidden ? enterZen : exitZen)();
 });
 
-window.addEventListener('resize', () => { moveThumb(); placers.forEach((place) => place()); });
+window.addEventListener('resize', () => {
+    moveThumb();
+    sizers.forEach((fit) => fit()); /* a shorter window can cap a scaled face */
+    placers.forEach((place) => place());
+});
 
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) { accrue(); save(); } else { keepPlaying(); render(); }
