@@ -26,7 +26,7 @@ static/timer.js     session state, storage, settings, the calculator
 static/graph.js     the graphing plane and the parser behind it
 static/music.js     the four playlists and the player that works them
 static/cursor.js    glass cursor and ribbon trail
-static/audio/       the tracks themselves, one flat folder of 130 (~830 MB)
+static/audio/       the tracks themselves, one flat folder of 130 (~215 MB)
 static/lofi_13.mp4  background loop (~10 MB, 4K)
 static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
 ```
@@ -179,6 +179,13 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
   element plays the lot, so the sound carries on while the tube is
   dragged, or while the timer runs underneath it. The chime that marks
   the end of a block is a separate thing, switched in Settings.
+- **The tracks are HE-AAC at 64 kbps in an MP4 shell** (`.m4a`), re-encoded
+  from the downloads to bring 7.2 hours of music from 804 MB down to 215.
+  HE-AAC sends only the lower half of the spectrum and rebuilds the top of
+  it on the way out, which is what makes a rate that low hold together on
+  soft, bass-light music heard in the background. Python's own table calls
+  a `.m4a` `audio/mp4a-latm`, a different packing that a browser is within
+  its rights to refuse, so `app.py` corrects the type to `audio/mp4`.
 - **Notes** opens a pad of sheets rather than one, kept between sessions
   in the same preferences blob and written back a moment after you stop
   typing. The strip under the head turns the pages: arrows either side of

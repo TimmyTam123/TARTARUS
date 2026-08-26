@@ -204,7 +204,7 @@ function deal() {
 
 const listNow = () => LISTS[spot.list];
 const trackNow = () => listNow().tracks[bag[at]];
-const src = (track) => `/static/audio/${track.file}.mp3`;
+const src = (track) => `/static/audio/${track.file}.m4a`;
 
 /* ── Saying where it is ───────────────────────────────────── */
 
