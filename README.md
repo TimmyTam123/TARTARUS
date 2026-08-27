@@ -202,7 +202,16 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
   file joins the stack by saying so.
 - **Cards resize** from the corner mark at their bottom right, which is
   also a way to bring one forward: taking hold of it raises the card
-  without dragging it, since only the head does that. Notes and the graph
+  without dragging it, since only the head does that. The mark is placed
+  against the corner rather than laid out with the rest: it used to hang
+  there on negative margins, and a flex line that ends on one lets the
+  growing part beside it size a few pixels past the card's own edge —
+  enough to give the card a scrollbar of its own, beside the one the sheet
+  or the list already had. Out of the flow it takes no part in the sizing
+  at all. A card also refuses to be laid out below the size the corner
+  would let you drag it to, since the size it remembers is a share of the
+  viewport and a window that has since grown shorter can ask for less than
+  the contents can give. Notes and the graph
   take whatever shape they are pulled into — the sheet and the plane fill
   it, and the plane redraws to the room it lands in. The calculator is the
   exception: a face laid out key for key has one shape, so it is scaled
@@ -219,6 +228,22 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
   rather than a pixel count — and a phone leaves the heights to the
   content, will not take a card below the width it would have had, and
   will not let a scaled-up face run off the side.
+- **On a phone** the session takes the middle of the screen and the drawers
+  open downwards rather than sideways; the graph puts its plane on top and
+  the typing under it, where the keyboard will not cover it; the tube drops
+  who made the track and how far in it is to keep its row. Everything is
+  driven by touch — the cards are dragged by their heads, sized from their
+  corners, and the plane takes one finger to pan and two to pinch. The root
+  type is smaller here, and the controls measured from it shrank with it, so
+  the settings rows keep the same minimum a key on the island does: a switch
+  row was coming out 22px tall, half a fingertip.
+- **A card is measured again when it is shown.** Hidden, it has no size —
+  and both the ceiling on a scaled face and the spot a placed one goes back
+  to are worked out from that size, so while it was away they were worked
+  out from nothing. Turning a phone on its side with the calculator shut
+  would otherwise bring it back taller than the screen, with the corner that
+  shrinks it off the bottom, or drop a card left near an edge almost
+  entirely off it.
 - **Keys go to the calculator** while its card is open — digits, operators,
   Enter, Backspace and the arrows — so a sum cannot be cut in half by the
   timer's own `Space` and `F`. `/` types the fraction bar, which is what

@@ -990,8 +990,10 @@ function span() {
 }
 
 graph.plane.addEventListener('pointerdown', (e) => {
-    graph.plane.setPointerCapture(e.pointerId);
+    /* The finger is written down before the capture is asked for: a
+       refused capture must not be what loses the gesture. */
     touches.set(e.pointerId, [e.clientX, e.clientY]);
+    graph.plane.setPointerCapture(e.pointerId);
 });
 
 graph.plane.addEventListener('pointermove', (e) => {

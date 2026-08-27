@@ -98,7 +98,20 @@ function reveal(node, on, ms = 400) {
     hiding.delete(node);
     if (on) {
         node.hidden = false;
-        requestAnimationFrame(() => settled(node).classList.add('is-ready'));
+        requestAnimationFrame(() => {
+            /* Hidden, a card has no size — and both the ceiling on a scaled
+               face and the spot a placed one goes back to are worked out
+               from that size, so while it was away they were worked out
+               from nothing. A phone turned on its side with the calculator
+               shut would bring it back taller than the screen, or drop a
+               card left near an edge almost entirely off it. Laid out
+               again, it can be measured again: reading a size back is what
+               forces that layout, and the size comes before the spot,
+               since the spot is worked out from it. */
+            settled(node).classList.add('is-ready');
+            sizers.forEach((fit) => fit());
+            placers.forEach((put) => put());
+        });
     } else {
         node.classList.remove('is-ready');
         hiding.set(node, setTimeout(() => { node.hidden = true; hiding.delete(node); }, ms));

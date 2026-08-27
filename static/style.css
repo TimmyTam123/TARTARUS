@@ -448,15 +448,24 @@ body {
    they are pulled into; the calculator, whose face has one shape, is
    scaled by `--zoom` in the transform above instead. */
 
-.card.is-sized { width: var(--w); height: var(--h); }
+/* The corner will not drag a card below this, but the size it stores is a
+   fraction of the viewport — so a window that has since grown shorter can
+   ask for less than the contents can give, and the card would scroll itself
+   again. The floor the corner keeps is kept here too. */
+.card.is-sized { width: var(--w); height: var(--h); min-width: 13rem; min-height: 9rem; }
 
+/* Out of the flow on purpose. In it, the corner hung on negative margins
+   to sit over the content rather than under it — and a flex line that ends
+   on a negative margin lets the growing part beside it size past the card's
+   own edge. Those few stray pixels were enough to give the card a scrollbar
+   of its own, beside the one the sheet or the list already had. Placed
+   against the corner instead, it takes no part in the sizing at all. */
 .card__grab {
-    position: sticky; /* stays in the corner of a card scrolled inside */
-    bottom: 0;
-    align-self: flex-end;
+    position: absolute;
+    right: 0.25rem;
+    bottom: 0.2rem;
     width: 0.9rem;
     height: 0.9rem;
-    margin: calc(-1 * var(--gap) - 0.9rem) -0.25rem -0.3rem 0;
     background: repeating-linear-gradient(-45deg,
         var(--line-strong) 0 0.075rem, transparent 0.075rem 0.28rem);
     -webkit-mask-image: linear-gradient(-45deg, #000 42%, transparent 58%);
@@ -1635,6 +1644,15 @@ body:not(.trail-on) #cursor-trail { display: none; }
     }
 
     .hud__drawer.is-ready { max-width: none; max-height: var(--col); margin-top: 0; }
+
+    /* A thumb needs a target, not a line. The island's keys already keep a
+       column's worth of room; the settings rows are given the same, since
+       the root type is smaller here and everything measured from it shrank
+       with it — a switch row came out 22px tall, half a fingertip. */
+    .switch,
+    .btn,
+    .field .slider { min-height: var(--col); }
+    .modal__head .iconbtn { min-width: var(--col); min-height: var(--col); }
 }
 
 /* ── Reduced motion ───────────────────────────────────────── */
