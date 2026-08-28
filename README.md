@@ -279,6 +279,11 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
   backs out of a menu first, then closes the card and hands the keys back.
 - **Restart** sends the session back to the start of its first block. Today's
   total is a record of the day rather than of the session, so it survives.
+- **Ending a session** clears the desk with it: the drawer shuts, and the
+  calculator, the notes and the graph all go away rather than being left
+  hanging over the home screen. What they were holding is untouched —
+  where each card sat, what was typed into it — so the next session opens
+  them exactly where the last one left them.
 - **Keyboard**: `Space` pauses or resumes, `F` toggles focus mode, `Esc` closes
   whatever is open, innermost first.
 - **Storage**: preferences — where each card was left, the calculator's

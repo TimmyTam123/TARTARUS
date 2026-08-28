@@ -280,6 +280,10 @@ function startSession() {
 function endSession() {
     pause();
     closeModal(el.settings);
+    /* Everything the session had open goes with it: the drawer, the cards
+       pulled out of it, and focus mode. Each card fades on its own clock,
+       which is shorter than the 450ms the island takes to leave. */
+    cards.forEach((shut) => shut(false));
     showTools(false);
     exitZen();
     state.mode = null;
