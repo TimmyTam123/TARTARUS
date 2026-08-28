@@ -33,6 +33,12 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
 
 ## Notes
 
+- **Four scripts, one scope.** They are classic `defer` scripts, not
+  modules, so every top-level name in `timer.js`, `graph.js`, `music.js`
+  and `cursor.js` sits in the same global. Two `const`s of one name kill
+  the second file outright; two `function`s of one name quietly replace
+  each other, which is worse. A new top-level name is worth grepping the
+  other three files for first.
 - **The island** — one box holding the clock and its buttons, with a groove
   at the top to say it can be picked up and dragged anywhere on screen. Its
   spot is stored as a fraction of the free space rather than a pixel offset,
@@ -59,19 +65,39 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
   ignored, as they are on the real one.
   Calc Settings carries Input/Output, Angle Unit, Number Format
   (Fix, Sci, Norm 1, Norm 2), Fraction Result and Digit Separator, and all
-  of them are honoured when an answer is printed. The nine letters A–F and
+  of them are honoured when an answer is printed: Sci keeps every digit it
+  was asked for, and Norm reaches for an exponent only at the ends of its
+  range — measured after the rounding, since 9999999999.9 does not fit in
+  ten figures however nearly it does on the way in. The nine letters A–F and
   x, y, z store and recall, and outlive the session.
 - **Reading a sum**: a small recursive-descent parser climbs expr → term →
   unary → fraction → power → postfix → primary, so `−2²` is −4, `2^3²` is
   2⁹, a fraction bar bites harder than `×`, and `2π`, `3sin(30` and a
   bracket left off the end all work as they do on the real thing. Answers
-  come back exact where they can — `sin(30` is ½, not 0.5 — and FORMAT
-  turns one into a decimal, a mixed fraction, prime factors, engineering
-  notation or degrees and minutes. A logarithm is written `log(base,value)`
-  either way round, and printed `log▫(▪)` once it has a base: the plain
-  `log` above `x²` leaves you to type the comma yourself, while the key
-  printed `log▪▫` lays the comma down for you and stands the cursor on the
-  base, so `▶` steps across to the value. A base left empty is ten.
+  come back exact where they can — `sin(30` is ½, `sin(60` is √3/2 — and
+  FORMAT turns one into a decimal, a mixed fraction, prime factors,
+  engineering notation or degrees and minutes. A logarithm is written
+  `log(base,value)` either way round, and printed `log▫(▪)` once it has a
+  base: the plain `log` above `x²` leaves you to type the comma yourself,
+  while the key printed `log▪▫` lays the comma down for you and stands the
+  cursor on the base, so `▶` steps across to the value. A base left empty
+  is ten.
+- **An exact answer is recognised, not derived.** The sum was done in
+  doubles long before the screen sees it, so there is nothing symbolic
+  left to work with: the printer instead looks for the small exact value
+  that the decimal is only a rounding of. A fraction first, by continued
+  fractions; then a multiple of π; then `a√m/b`, tried over every radicand
+  under a hundred with no square factor in it, which is where nearly every
+  angle in the table lands; and last the two-root form a half angle comes
+  to, which is what makes `sin(15` into (√6−√2)/4 and `tan(15` into 2−√3.
+  Each is written in the same language the keypad types, so an answer can
+  be typed straight back in and the hand that draws an entry stacks it
+  over its bar without being told how.
+  The line between an answer and a coincidence is drawn at twelve digits:
+  every one of these comes out of a double within a few bits of the truth,
+  while a ten-digit decimal typed by hand is a thousand times further out
+  than that, so `0.8660254038` stays as it was typed while `sin(60` does
+  not. Four thousand random doubles snapped to nothing at all.
 - **Sums are drawn as they are written**, in the entry line as well as the
   answer: a fraction stacked over its bar, a logarithm's base sitting low
   beside it. One walk draws a stretch of the line and hands each half it
@@ -93,7 +119,9 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
     the median and leave it out of both halves. Paired data adds the
     least-squares line `y = a + bx` and its correlation. *Statistics Calc*
     drops you on the worksheet with all of those reachable by name, so
-    `2x̄` and `Σx²` are values like any other.
+    `2x̄` and `Σx²` are values like any other. A figure with nothing behind
+    it says `ERROR` rather than printing a NaN: the sample spread of a
+    single reading, or the mean of a table nothing has been typed into.
   - **Table** works `f(x)` and `g(x)` down a range a step at a time. Each
     row sets `x` and reads the definitions back through the same parser, so
     a column can do anything the worksheet can; a row that will not

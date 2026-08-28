@@ -1352,33 +1352,53 @@ function grouped(s) {
     return whole.replace(/\B(?=(\d{3})+$)/g, ',') + (rest === undefined ? '' : `.${rest}`);
 }
 
-function sci(n, places) {
+/* Sci was asked for a number of digits and keeps all of them. Norm only
+   falls back on this shape at the ends of its range, where the zeros it
+   would be left holding say nothing. */
+function sci(n, places, keep = false) {
     const [mantissa, exponent] = n.toExponential(places).split('e');
-    return `${trim(mantissa)}×10${sup(exponent.replace('+', ''))}`;
+    return `${keep ? minus(mantissa) : trim(mantissa)}×10${sup(exponent.replace('+', ''))}`;
+}
+
+/* The same figures with no exponent behind them. How many decimal places
+   that comes to depends on where the point falls once the rounding is
+   done, which is what `toExponential` is being asked here. */
+function written(n, digits) {
+    const power = Number(n.toExponential(digits - 1).split('e')[1]);
+    return trim(n.toFixed(Math.max(0, Math.min(100, digits - 1 - power))));
 }
 
 function showNum(n) {
+    /* A figure with no value behind it — the spread of a single reading,
+       the mean of an empty table — says so rather than printing NaN. */
+    if (!isFinite(n)) return 'ERROR';
+
     const set = prefs.calcset;
     if (set.fmt === 'Fix') return grouped(minus(n.toFixed(set.digits)));
-    if (set.fmt === 'Sci') return sci(n, set.digits);
+    if (set.fmt === 'Sci') return sci(n, set.digits, true);
 
-    const size = Math.abs(n);
+    /* Measured after the rounding, not before it: 9999999999.9 does not
+       fit in ten digits, however nearly it does on the way in. */
+    const size = Math.abs(Number(n.toPrecision(10)));
     const small = set.fmt === 'Norm 1' ? 1e-2 : 1e-9;
     if (size >= 1e10 || (size && size < small)) return sci(n, 9);
-    return grouped(trim(n.toPrecision(10)));
+    return grouped(written(n, 10));
 }
 
-/* MathO shows the exact fraction where there is one; DecimalO never does. */
+/* MathO answers a sum the way it was asked — the fraction, the root or
+   the multiple of π that the decimal is only a rounding of. DecimalO
+   never does. */
 function standard(v) {
     if (prefs.calcset.io.endsWith('DecimalO')) return showNum(v);
-    return (prefs.calcset.frac === 'Mixed Fraction' ? asMixed(v) : asFraction(v)) || showNum(v);
+    const frac = prefs.calcset.frac === 'Mixed Fraction' ? asMixed(v) : asFraction(v);
+    return frac || exact(v) || showNum(v);
 }
 
-/* The nearest fraction that lands exactly on the value, by continued
-   fractions. Nothing to show if there isn't one. */
-function asFraction(x) {
+/* The nearest fraction that lands exactly on a value, by continued
+   fractions: its two halves, or nothing where no small enough pair fits. */
+function ratio(x, most = 9999) {
     const size = Math.abs(x);
-    const near = (top, bottom) => Math.abs(size - top / bottom) <= size * 1e-12;
+    const near = (top, bottom) => Math.abs(size - top / bottom) <= size * SNAP;
     let rest = size, top = 1, lastTop = 0, bottom = 0, lastBottom = 1;
 
     for (let k = 0; k < 24 && isFinite(rest); k++) {
@@ -1389,8 +1409,14 @@ function asFraction(x) {
         rest = 1 / (rest - whole);
     }
 
-    if (bottom < 2 || bottom > 9999 || !near(top, bottom)) return null;
-    return `${x < 0 ? '−' : ''}${top}/${bottom}`;
+    if (!bottom || bottom > most || !near(top, bottom)) return null;
+    return [x < 0 ? -top : top, bottom];
+}
+
+/* The same pair written out, which wants a denominator worth writing. */
+function asFraction(x) {
+    const part = ratio(x);
+    return part && part[1] > 1 ? `${dash(part[0])}${Math.abs(part[0])}/${part[1]}` : null;
 }
 
 /* The same fraction with its whole part pulled out in front. */
@@ -1401,6 +1427,121 @@ function asMixed(x) {
     if (top < bottom) return improper;
     const whole = Math.floor(top / bottom);
     return `${x < 0 ? '−' : ''}${whole}¦${top - whole * bottom}/${bottom}`;
+}
+
+/* ── Exact answers ────────────────────────────────────────────
+   A quarter turn is √2/2 on paper and 0.7071067812 in a double, and in
+   MathO the screen says the first. Nothing here works symbolically — the
+   sum was done in doubles long before any of it runs — so the job is
+   recognition: find the small exact value that lands on the answer, and
+   write it in the language the keypad types, so what is printed can be
+   typed straight back in and drawn by the same hand that draws an entry.
+
+   Every one of these comes out of a double within a few bits of the
+   truth, a part in 10¹⁵ or so, while a decimal typed by hand to the ten
+   digits the screen holds is a thousand times further out than that.
+   Twelve digits is the line drawn between the two. */
+
+const SNAP = 1e-12;
+
+/* Radicands with no square factor in them: √8 is 2√2, so 8 is never
+   wanted, and asking for it would only give the same answer twice. */
+const rootless = (top) => {
+    const out = [];
+    for (let m = 2; m <= top; m++) {
+        let clean = true;
+        for (let p = 2; p * p <= m; p++) if (m % (p * p) === 0) clean = false;
+        if (clean) out.push(m);
+    }
+    return out;
+};
+
+/* One root is looked for widely. Two at once is a far wider net for the
+   same tolerance to hold, so that pass is cast over the small radicands
+   alone — the ones half angles actually throw up — with 1 standing in
+   for a term that carries no root, which is what makes tan 15 into 2−√3. */
+const ROOTS = rootless(99);
+const BOTH = [1, ...rootless(15)];
+const SPAN = 30; /* how large a whole number in an exact answer may grow */
+
+const dash = (n) => (n < 0 ? '−' : '');
+
+/* A whole multiple of a root, without the 1 nobody writes. */
+const rooted = (a, m) => (m === 1 ? String(a) : `${a === 1 ? '' : a}√(${m})`);
+const divided = (body, d) => (d === 1 ? body : `${body}/${d}`);
+
+function exact(v) {
+    const size = Math.abs(v);
+    /* A whole number is exact already, and none of these ever is one. */
+    if (!isFinite(size) || v % 1 === 0 || size > 1e6) return null;
+
+    /* A multiple of π first: one question rather than thousands of them,
+       and no answer is ever both that and a root. */
+    const turns = ratio(v / Math.PI, SPAN);
+    if (turns && Math.abs(turns[0]) <= SPAN) {
+        const many = Math.abs(turns[0]);
+        return dash(turns[0]) + divided(`${many === 1 ? '' : many}π`, turns[1]);
+    }
+
+    /* One root: a√m over b, which is where nearly every angle in the
+       table lands. The smallest radicand that fits wins, so √3/2 is
+       never dressed up as √12/4. */
+    for (const m of ROOTS) {
+        const part = ratio(v / Math.sqrt(m), SPAN);
+        if (part && Math.abs(part[0]) <= SPAN) {
+            return dash(part[0]) + divided(rooted(Math.abs(part[0]), m), part[1]);
+        }
+    }
+
+    /* And two, which is what a half angle comes to. No value fits more
+       than one pair of radicands, so the first pair that fits is the
+       answer rather than merely an answer. */
+    for (let i = 0; i < BOTH.length; i++) {
+        for (let k = i + 1; k < BOTH.length; k++) {
+            const found = twoRoots(v, BOTH[i], BOTH[k]);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+/* v = (a√u + b√w)/d, with both terms really there. Denominators are
+   tried smallest first, so the plainest way of saying it is found. */
+function twoRoots(v, u, w) {
+    const ru = Math.sqrt(u);
+    const rw = Math.sqrt(w);
+    for (let d = 1; d <= SPAN; d++) {
+        for (let a = -SPAN; a <= SPAN; a++) {
+            if (!a) continue;
+            const b = (v * d - a * ru) / rw;
+            const near = Math.round(b);
+            if (!near || Math.abs(near) > SPAN) continue;
+            if (Math.abs(b - near) <= (Math.abs(near) + 1) * SNAP) return twoTerms(a, u, near, w, d);
+        }
+    }
+    return null;
+}
+
+/* The two terms, in the order they read best. */
+function twoTerms(a, u, b, w, d) {
+    const by = gcd(gcd(Math.abs(a), Math.abs(b)), d);
+    let terms = [[a / by, u], [b / by, w]];
+    d /= by;
+
+    /* Both halves negative is one minus in front of the whole thing —
+       and a minus in front wants the brackets a denominator would have
+       brought with it anyway. */
+    const lead = terms.every(([c]) => c < 0);
+    if (lead) terms = terms.map(([c, m]) => [-c, m]);
+
+    /* Whichever half comes first: the one being added, and then the
+       deeper root — so tan 15 is 2−√3, tan 22.5 is √2−1, and sin 75 is
+       (√6+√2)/4 rather than any of them backwards. */
+    const [[x, m], [y, n]] = terms.sort((p, q) => (p[0] < 0) - (q[0] < 0) || q[1] - p[1]);
+
+    const body = `${rooted(x, m)}${y < 0 ? '−' : '+'}${rooted(Math.abs(y), n)}`;
+    const held = lead || d > 1 ? `(${body})` : body;
+    return `${lead ? '−' : ''}${divided(held, d)}`;
 }
 
 /* The exponent moved to the nearest multiple of three. */
