@@ -67,7 +67,10 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
 - **The island** — one box holding the clock and its buttons, with a groove
   at the top to say it can be picked up and dragged anywhere on screen. Its
   spot is stored as a fraction of the free space rather than a pixel offset,
-  so an edge stays an edge after a resize or a rotation.
+  so an edge stays an edge after a resize or a rotation. It is the one pane
+  that wraps its glass instead of being it, so its corners have to be cut
+  twice — the shadow it carries has a bright hairline along its top inside
+  edge, and left square that hairline ran on past the curve.
 - **Controls**: pausing slides out restart, the speaker and settings; the
   toolbox slides out Math, Graph and Notes. Both are columns of the box itself,
   clipped open and shut so it grows and shrinks smoothly rather than

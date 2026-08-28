@@ -296,6 +296,13 @@ body {
     top: max(var(--pad), env(safe-area-inset-top));
     left: max(var(--pad), env(safe-area-inset-left));
     z-index: 10;
+    /* The island wraps the glass rather than being it, so the corners have
+       to be cut here too: the shadow below carries a hairline along its top
+       inside edge, and on a square box that hairline runs corner to corner,
+       straight past where the glass has already curved away. It showed as
+       two bright stubs either side of the top, which read as a corner that
+       had not been rounded at all. */
+    border-radius: var(--r-lg);
     box-shadow: none;
     --in: 0;
     touch-action: none; /* the island is dragged, not scrolled */
