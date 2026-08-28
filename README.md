@@ -16,11 +16,36 @@ python app.py
 
 Then open <http://localhost:5000>.
 
+`app.py` is a convenience, not a requirement: there is no server-side
+work here at all — no build, no API, nothing but files — so any static
+host will serve it.
+
+## Publish it
+
+Settings ▸ Pages ▸ Deploy from a branch ▸ `master` ▸ `/ (root)`, and it
+comes up at `https://<user>.github.io/TARTARUS/`. There is no build step
+and no workflow to add.
+
+The one thing that needed care is that a project page is not served at
+`/`: it sits under a folder named after the repository. Every link is
+therefore written relative to the page — `static/style.css`, never
+`/static/style.css` — including the one `music.js` builds for each track,
+which is why the entry point is `index.html` rather than `main.html`.
+Checked by serving the folder under a subpath and playing a track through:
+the page, the backdrop and the audio all resolve, and GitHub Pages answers
+range requests, so the seek bar works.
+
+The audio is the thing to keep an eye on: 130 tracks come to about 215 MB
+of the 1 GB a Pages site is allowed, and Pages asks for a soft 100 GB of
+bandwidth a month, which is roughly five hundred people listening through
+the lot.
+
 ## Files
 
 ```
-app.py              serves main.html and /static
-main.html           the whole interface — home, session, focus mode, dialogs
+index.html          the whole interface — home, session, focus mode, dialogs
+app.py              a dev server: hands back index.html and static/
+.nojekyll           tells GitHub Pages to serve the files as they are
 static/style.css    design tokens + every screen
 static/timer.js     session state, storage, settings, the calculator
 static/graph.js     the graphing plane and the parser behind it

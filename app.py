@@ -14,7 +14,7 @@ app = Flask(__name__, static_folder='static')
 
 @app.get('/')
 def main():
-    return send_from_directory(BASE_DIR, 'main.html')
+    return send_from_directory(BASE_DIR, 'index.html')
 
 
 @app.get('/static/lofi_13.mp4')

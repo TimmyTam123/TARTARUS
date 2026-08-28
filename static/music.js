@@ -204,7 +204,9 @@ function deal() {
 
 const listNow = () => LISTS[spot.list];
 const trackNow = () => listNow().tracks[bag[at]];
-const src = (track) => `/static/audio/${track.file}.m4a`;
+/* Relative to the page, not to the site root: served from a project
+   page the whole thing sits under a folder rather than at `/`. */
+const src = (track) => `static/audio/${track.file}.m4a`;
 
 /* ── Saying where it is ───────────────────────────────────── */
 
