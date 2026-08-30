@@ -181,42 +181,46 @@
                     <span class="hud__progress" id="progress" aria-hidden="true"></span>
                 </div>
 
-                <div class="hud__controls">
-                    <button class="iconbtn" id="toggle" aria-label="Pause">
-                        <svg class="icon"><use id="toggle-icon" href="#i-pause"></use></svg>
-                    </button>
-                    <button class="iconbtn" id="focus" aria-label="Focus mode">
-                        <svg class="icon"><use href="#i-expand"></use></svg>
-                    </button>
-                    <button class="iconbtn" id="tools" aria-label="Study tools" aria-expanded="false">
-                        <svg class="icon"><use href="#i-toolbox"></use></svg>
-                    </button>
-                </div>
+                <!-- Every key on the island. Only a box on a phone,
+                     where they gather into a block beside the clock. -->
+                <div class="hud__keys">
+                    <div class="hud__controls">
+                        <button class="iconbtn" id="toggle" aria-label="Pause">
+                            <svg class="icon"><use id="toggle-icon" href="#i-pause"></use></svg>
+                        </button>
+                        <button class="iconbtn" id="focus" aria-label="Focus mode">
+                            <svg class="icon"><use href="#i-expand"></use></svg>
+                        </button>
+                        <button class="iconbtn" id="tools" aria-label="Study tools" aria-expanded="false">
+                            <svg class="icon"><use href="#i-toolbox"></use></svg>
+                        </button>
+                    </div>
 
-                <!-- Only while paused -->
-                <div class="hud__controls hud__drawer" id="more" hidden>
-                    <button class="iconbtn" id="restart" aria-label="Restart">
-                        <svg class="icon"><use id="restart-icon" href="#i-restart"></use></svg>
-                    </button>
-                    <button class="iconbtn" id="audio" aria-label="Music" title="Music">
-                        <svg class="icon"><use id="audio-icon" href="#i-mute"></use></svg>
-                    </button>
-                    <button class="iconbtn" id="open-settings" aria-label="Settings">
-                        <svg class="icon"><use href="#i-gear"></use></svg>
-                    </button>
-                </div>
+                    <!-- Only while paused -->
+                    <div class="hud__controls hud__drawer" id="more" hidden>
+                        <button class="iconbtn" id="restart" aria-label="Restart">
+                            <svg class="icon"><use id="restart-icon" href="#i-restart"></use></svg>
+                        </button>
+                        <button class="iconbtn" id="audio" aria-label="Music" title="Music">
+                            <svg class="icon"><use id="audio-icon" href="#i-mute"></use></svg>
+                        </button>
+                        <button class="iconbtn" id="open-settings" aria-label="Settings">
+                            <svg class="icon"><use href="#i-gear"></use></svg>
+                        </button>
+                    </div>
 
-                <!-- Only while the toolbox is on -->
-                <div class="hud__controls hud__drawer" id="toolpanel" hidden>
-                    <button class="iconbtn" id="tool-math" aria-label="Math" title="Math">
-                        <svg class="icon"><use href="#i-math"></use></svg>
-                    </button>
-                    <button class="iconbtn" id="tool-graph" aria-label="Graph" title="Graph">
-                        <svg class="icon"><use href="#i-axes"></use></svg>
-                    </button>
-                    <button class="iconbtn" id="tool-notes" aria-label="Notes" title="Notes">
-                        <svg class="icon"><use href="#i-notes"></use></svg>
-                    </button>
+                    <!-- Only while the toolbox is on -->
+                    <div class="hud__controls hud__drawer" id="toolpanel" hidden>
+                        <button class="iconbtn" id="tool-math" aria-label="Math" title="Math">
+                            <svg class="icon"><use href="#i-math"></use></svg>
+                        </button>
+                        <button class="iconbtn" id="tool-graph" aria-label="Graph" title="Graph">
+                            <svg class="icon"><use href="#i-axes"></use></svg>
+                        </button>
+                        <button class="iconbtn" id="tool-notes" aria-label="Notes" title="Notes">
+                            <svg class="icon"><use href="#i-notes"></use></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

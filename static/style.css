@@ -56,6 +56,16 @@
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --spring: cubic-bezier(0.34, 1.2, 0.36, 1);
     --dim: 0.3; /* driven by the Background dim slider */
+
+    /* The four bands a phone keeps for itself — around a notch, along the
+       home indicator, either side of a camera when it is held on its
+       side. Named once here rather than spelled out at every edge that
+       has to clear one, and read back by script through `.edges` below,
+       so what is laid out and what is worked out cannot disagree. */
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
 }
 
 *,
@@ -92,6 +102,10 @@
 html {
     /* 14px on a phone → 18px on a large desktop, everything follows */
     font-size: clamp(0.875rem, 0.62vw + 0.7rem, 1.15rem);
+    /* A phone turned on its side sets the type a size larger unless it is
+       told the page already knows its own width. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 body {
@@ -101,7 +115,49 @@ body {
     background: radial-gradient(120% 90% at 70% 20%, #1d2a26 0%, #0d1210 60%, #070a09 100%);
     min-height: 100dvh;
     overflow: hidden;
+    /* Nothing here scrolls, so a drag past an edge has nothing to give: on
+       a phone it would only pull the whole page out from under the glass
+       and let it snap back. */
+    overscroll-behavior: none;
+    /* A touch on glass should light the glass, not flash a grey box behind
+       it a moment later. */
+    -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
+}
+
+/* Held down, every one of these is the start of a drag or a repeat — not
+   an invitation to select the wording or to open the system's own menu
+   over the top of it. The two writing surfaces are deliberately absent. */
+.hud__box,
+.card__head,
+.card__grab,
+.grip,
+.key,
+.btn,
+.iconbtn,
+.mode,
+.music {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* ── What the screen keeps for itself ─────────────────────────
+   A phone keeps some of its own screen: the band around a notch, the
+   strip the home indicator sits in. CSS is told their depths through
+   `env(safe-area-inset-*)`, which no script can ask for — so this box
+   is kept, whose padding is exactly those four, and its padding is read
+   instead. It is measured rather than worked out because it moves: the
+   same phone turned on its side changes every one of them. */
+.edges {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    padding: var(--sat) var(--sar) var(--sab) var(--sal);
+    visibility: hidden;
+    pointer-events: none;
 }
 
 /* Focus ring — visible on every interactive element, keyboard only */
@@ -144,7 +200,7 @@ body {
     gap: clamp(1rem, 3vh, 2rem);
     width: 100%;
     min-height: 100dvh;
-    padding: max(var(--pad), env(safe-area-inset-top)) var(--pad);
+    padding: max(var(--pad), var(--sat)) var(--pad);
     text-align: center;
     transition: --in 0.5s var(--ease);
 }
@@ -293,8 +349,8 @@ body {
 
 .hud {
     position: fixed;
-    top: max(var(--pad), env(safe-area-inset-top));
-    left: max(var(--pad), env(safe-area-inset-left));
+    top: max(var(--pad), var(--sat));
+    left: max(var(--pad), var(--sal));
     z-index: 10;
     /* The island wraps the glass rather than being it, so the corners have
        to be cut here too: the shadow below carries a hairline along its top
@@ -402,6 +458,11 @@ body {
 
 .hud__card.is-break .hud__progress { background: linear-gradient(90deg, transparent, var(--accent-break)); }
 
+/* No box of its own anywhere but on a phone's bar: everywhere else its
+   three children are the row's own children, laid out as the row lays
+   anything else out. */
+.hud__keys { display: contents; }
+
 .hud__controls {
     display: flex;
     flex-direction: column;
@@ -432,13 +493,21 @@ body {
 
 .card {
     position: fixed;
-    top: 50%;
-    left: 50%;
+    /* The middle of what can be used, not the middle of the window: with
+       a camera along one edge and a home indicator along the other, those
+       are not the same point, and a card centred on the second hangs off
+       the usable screen by however far apart they are. */
+    top: calc((var(--sat) + 100dvh - var(--sab)) / 2);
+    left: calc((var(--sal) + 100vw - var(--sar)) / 2);
     z-index: 11;
     display: flex;
     flex-direction: column;
     gap: var(--gap);
-    max-height: calc(100dvh - 2 * var(--pad));
+    /* The window, less the padding, less whatever the screen keeps for
+       itself at either end — a card as tall as the viewport would have its
+       head under the clock and its foot under the home indicator. */
+    max-height: calc(100dvh - 2 * var(--pad)
+        - var(--sat) - var(--sab));
     overflow-y: auto;
     padding: var(--gap);
     box-shadow: none;
@@ -1421,9 +1490,20 @@ body {
 .modal {
     position: fixed;
     inset: 0;
-    display: grid;
-    place-items: center;
-    padding: var(--pad);
+    /* Flex rather than grid, so that the card's own ceiling is measured
+       against this box. A grid track is sized to what it holds before any
+       ceiling is applied — the row came out 446px tall inside a 351px
+       window — and centring the card in a track that deep dropped it
+       through the bottom of the screen. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Centred in what can be used rather than in the window, and padded
+       off the screen's own edges: the middle of a phone held sideways is
+       ten points below the middle of the part of it you can see. */
+    padding:
+        max(var(--pad), var(--sat)) max(var(--pad), var(--sar))
+        max(var(--pad), var(--sab)) max(var(--pad), var(--sal));
     z-index: 100;
 }
 
@@ -1440,7 +1520,7 @@ body {
     display: flex;
     flex-direction: column;
     width: min(92vw, 30rem);
-    max-height: 86dvh;
+    max-height: min(86dvh, 100%);
     padding: clamp(1.1rem, 3vh, 2rem);
     gap: clamp(0.9rem, 2.5vh, 1.5rem);
     box-shadow: none;
@@ -1594,53 +1674,91 @@ body {
 
 body:not(.trail-on) #cursor-trail { display: none; }
 
-/* ── Small screens ────────────────────────────────────────── */
+/* ── A fingertip ──────────────────────────────────────────────
+   A pointer that cannot hover is a fingertip, and a fingertip is about
+   44px across whichever way the phone is being held — so none of this
+   sits inside either of the shape queries below.
+
+   The keypad is the one exception, and a deliberate one. That face is a
+   scale drawing of a real calculator, six columns across and eight rows
+   down, and its proportions are the whole point of it: at 44px a key it
+   would stand half again as tall as any phone. It is grown as far as
+   the screen allows and no further. */
+
+@media (hover: none) and (pointer: coarse) {
+    /* The root type is smaller on a phone and everything measured from
+       it shrank to match — a switch row came out 22px tall, half a
+       fingertip. These are given a column's worth of room instead. */
+    .switch,
+    .btn,
+    .field .slider { min-height: var(--col); }
+
+    /* Every key in the place but the keypad's — which is the exception
+       written down above, and the only one. The rest are all laid out to
+       the drawing inside them, which is a good deal smaller than the
+       finger that has to land on it: the page strip on the pad came out
+       21px square, the tube's play key not much more. */
+    button:not(.key) { min-width: var(--col); min-height: var(--col); }
+
+    /* And past the sizes those same two were given for a mouse. Both were
+       drawn to the glyph inside them — 26px for the three over the plane,
+       31px for the one that shuts a panel — and both say so in a rule with
+       a class to spare, so the floor has to say it again to be heard. */
+    .graph__view .iconbtn,
+    .modal__head .iconbtn { min-width: var(--col); min-height: var(--col); }
+
+    /* The strip that scrubs a track runs the width of the tube but stands
+       ten pixels high, which is a mouse's idea of a target. */
+    .music__seek { height: 1.2rem; }
+
+    /* Below 16px a field is not read, it is zoomed into: iOS magnifies
+       the page around it on focus and there is no scroll here to come
+       back with, so the page is simply left large and off to one side.
+       16px is where that line is drawn, so 16px is the floor.
+
+       A line of maths and the same line set are one row wearing two
+       faces, and they are given the same size and the same room, so
+       that swapping between them moves nothing. */
+    .notes__sheet,
+    .number,
+    .expr__line,
+    .expr__math { font-size: max(1rem, 16px); }
+
+    .expr__line,
+    .expr__math { min-height: var(--col); }
+
+    /* The corner is dragged, and a finger covers it entirely */
+    .card__grab { width: 1.4rem; height: 1.4rem; }
+}
+
+/* ── A phone, upright ─────────────────────────────────────────
+   The session is the whole screen here, so the island is centred on it
+   rather than parked in a corner. */
 
 @media (max-width: 40rem) {
-    /* On a phone the session is the whole screen, so centre it. */
+    /* ── The bar ──────────────────────────────────────────────
+       Upright, a phone puts the island along the foot and leaves it
+       there. A thumb reaches the bottom of a six-inch screen and does not
+       reach the middle of one, so the only controls in the place live
+       where they can be pressed — and nothing moves when a card comes up,
+       because there is nowhere for the island to move to.
+
+       It is not dragged here and it does not carry its groove: it is
+       furniture rather than a thing on a desk. */
     .hud {
-        top: 50%;
-        left: max(var(--pad), env(safe-area-inset-left));
-        right: max(var(--pad), env(safe-area-inset-right));
-        transform: translateY(-50%);
+        top: auto;
+        bottom: max(var(--pad), var(--sab));
+        left: max(var(--pad), var(--sal));
+        right: max(var(--pad), var(--sar));
+        width: auto;
+        transform: none;
     }
 
-    /* A dragged island keeps its own width instead of spanning the screen */
-    .hud.is-placed { width: min(88vw, 22rem); }
-
-    .hud__row { flex-direction: column; }
-    .hud__card { width: 100%; padding: clamp(1.2rem, 4vh, 2rem) var(--pad); }
-    .hud__time { font-size: clamp(2.6rem, 14vw, 4.5rem); }
+    .hud__box { cursor: default; }
+    .grip { display: none; }
     .hud__controls { flex-direction: row; justify-content: center; }
     .modes { flex-wrap: wrap; }
     .mode { flex: 1 1 30%; }
-
-    /* Stacked, a card is as tall as its content: a height pulled out on a
-       larger screen would only push the plane off the bottom. And a width
-       is a share of the viewport, so one narrowed on a desktop would come
-       out too narrow to read here — it may be wider than the default, but
-       never thinner. */
-    .card.is-sized { height: auto; min-width: min(92vw, 24rem); }
-
-    /* Nor may a face scaled up on a desktop run off the side here. It can
-       still be made smaller on a phone; it just cannot be made bigger. */
-    .card.is-scaled { transform: translate(-50%, -50%) scale(min(var(--zoom, 1), 1)); }
-    .card.is-scaled.is-placed { transform: scale(min(var(--zoom, 1), 1)); }
-    .card.is-sized .graph__body { --plane: min(20rem, 40dvh); }
-    .notes { height: auto; }
-    .notes__sheet { min-height: 40vh; }
-
-    /* The tube keeps its row on a phone by dropping what it can spare:
-       who made the track, and how far in it is. */
-    .music__by,
-    .music__at { display: none; }
-    .music__name { max-width: 4.5rem; }
-
-    /* Too narrow for two columns: the plane goes on top, and the typing
-       under it where the keyboard will not cover it. */
-    .graph__body { grid-template-columns: minmax(0, 1fr); }
-    .graph__plot { order: -1; }
-    .graph__side { max-height: 30vh; }
 
     /* The row is stacked here, so the extras column opens downwards */
     .hud__drawer {
@@ -1652,16 +1770,144 @@ body:not(.trail-on) #cursor-trail { display: none; }
 
     .hud__drawer.is-ready { max-width: none; max-height: var(--col); margin-top: 0; }
 
-    /* A thumb needs a target, not a line. The island's keys already keep a
-       column's worth of room; the settings rows are given the same, since
-       the root type is smaller here and everything measured from it shrank
-       with it — a switch row came out 22px tall, half a fingertip. */
-    .switch,
-    .btn,
-    .field .slider { min-height: var(--col); }
-    .modal__head .iconbtn { min-width: var(--col); min-height: var(--col); }
+    /* Too narrow for two columns: the plane goes on top, and the typing
+       under it where the keyboard will not cover it. */
+    .graph__body { grid-template-columns: minmax(0, 1fr); }
+    .graph__plot { order: -1; }
+
+    /* The tube keeps its row on a phone by dropping what it can spare:
+       who made the track, and how far in it is. */
+    .music__by,
+    .music__at { display: none; }
+    .music__name { max-width: 4.5rem; }
+
+    /* The picker and its note sit where they can be read; the button that
+       is actually pressed goes down where a thumb is, rather than in the
+       middle of a screen taller than a hand. */
+    .home {
+        justify-content: flex-end;
+        gap: 1.4rem;
+        padding-bottom: calc(max(var(--pad), var(--sab)) + 10vh);
+    }
+
+    /* The clock down the left at whatever height the keys come to, and the
+       keys themselves gathered into a block of three columns down the
+       right — so the drawers stack under the row they belong with rather
+       than wrapping into the space beside the clock and leaving the
+       right-hand half of the bar empty. How tall it all came to is
+       measured rather than assumed: that measurement is what the sheet
+       above it stands on. */
+    .hud__row { align-items: stretch; }
+
+    .hud__keys {
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        gap: var(--gap);
+        /* Three keys across, whichever rows happen to be out, so the block
+           keeps one edge however much of it is showing. */
+        width: calc(3 * var(--col) + 2 * var(--gap));
+    }
+
+    /* The keys say how tall the bar is, and the clock takes that height
+       rather than adding to it. Left with its own padding and its label it
+       stood half a key taller than the row beside it, which read as the
+       clock having been dropped in rather than built in — and made the bar
+       taller than it had any need to be. */
+    .hud__card {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+        min-height: 0;
+        padding: 0 0.5rem;
+    }
+
+    /* Which leaves the figures alone in it. Sized to the room the clock
+       actually has — the bar less the three columns of keys — since an
+       hours-long session reads `11:23:45`, and that is eight figures to
+       get across the narrowest phone there is. The phase goes: the strip
+       of light along the card's own foot already carries it, in the colour
+       of whichever block is running. */
+    .hud__phase { display: none; }
+
+    .hud__time {
+        font-size: clamp(1.4rem, 9vw, 2.5rem);
+        line-height: 1; /* the figures, and nothing above or below them */
+    }
+
+    /* Notes and the graph take the whole sheet. The calculator has one
+       shape and is scaled into it instead, hung from the top edge so it
+       grows down into the room rather than out of both ends of it. */
+    .card:not(.music) {
+        /* Whichever is deeper stands at the foot: the bar, or the
+           keyboard that has come up over the top of it. */
+        --head: max(var(--pad), var(--sat));
+        --foot-bar: calc(var(--bar, 4rem) + var(--gap) + max(var(--pad), var(--sab)));
+        --foot-keys: calc(var(--kb, 0px) + var(--pad));
+        --foot: max(var(--foot-bar), var(--foot-keys));
+        top: var(--head);
+        left: max(var(--pad), var(--sal));
+        right: max(var(--pad), var(--sar));
+    }
+
+    .card:not(.music, .calc) {
+        bottom: var(--foot);
+        width: auto;
+        height: auto;
+        min-width: 0;
+        min-height: 0;
+        max-height: none;
+        transform: none;
+    }
+
+    /* The keypad has one shape, so it is not stretched into the sheet —
+       it is scaled to it, and set in the middle of what it was given.
+       Which is also how its printing finally comes up off six pixels:
+       the face is laid out in rem and a wider card only ever bought it
+       wider keys, whereas one number over the whole thing brings the
+       keys, the screen and the printing up together. */
+    .card.calc {
+        top: calc((var(--head) + 100dvh - var(--foot)) / 2);
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%) scale(var(--zoom, 1));
+    }
+
+    /* A sheet is not picked up and not pulled about: it is the screen. */
+    .card:not(.music) .card__grab,
+    .card:not(.music) .grip { display: none; }
+    .card:not(.music) .card__head { cursor: default; }
+
+    /* Filling the sheet already, neither writing surface asks for a height
+       of its own — a floor set in the screen's own units would hold one
+       open under a keyboard that had just taken half the screen away. */
+    .graph__side { min-height: 0; }
+    .graph__body { --plane: min(20rem, 34dvh); }
 }
 
+/* ── A phone on its side ──────────────────────────────────────
+   Three hundred and ninety points of height, and a keypad that wants six
+   hundred. There is width to spare here, which is the one thing there was
+   none of upright, so the island keeps its corner and a card keeps the
+   middle — and the whole height to be scaled into.
+
+   Nothing is stacked and nothing is pinned: what was broken sideways was
+   only ever that a face taller than the screen had no ceiling to be held
+   under, and that is fixed where the ceiling is worked out rather than
+   here. */
+
+@media (max-height: 30rem) {
+    /* The root type is sized off the width, and the width of a phone held
+       sideways is the width of a laptop — so every rem in the place grew
+       to match, on the one screen that has no height to spare. Sized off
+       the short way here instead, which is the measurement that actually
+       says what this is. */
+    html { font-size: clamp(0.875rem, 0.62vmin + 0.7rem, 1.15rem); }
+
+    /* Measured across the screen, and across is the one direction there is
+       plenty of. Held to the short way as well. */
+    .zen__time { font-size: clamp(2.5rem, 22vh, 8rem); }
+}
 /* ── Reduced motion ───────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

@@ -274,25 +274,103 @@ static/lofi_720.mp4 a 720p re-encode of it (~2 MB, unused)
   rather than reshaped, keys, screen and printed alternates together, and
   the ratio holds by construction rather than by arithmetic. It is never
   scrolled either — the whole face is always on the card — so it is never
-  allowed to stand taller than the screen: the corner that would shrink it
-  again has to stay reachable. That ceiling caps what is shown without
-  touching what was asked for, so a face sized on a tall window comes back
-  whole on the next one. Its corner has a strip of its own along the foot,
-  where it cannot take a press meant for EXE. A placed card
-  grows from its own top-left corner, so where it was put stays where it
-  is. Like a card's spot, its size is kept as a share of the viewport
-  rather than a pixel count — and a phone leaves the heights to the
-  content, will not take a card below the width it would have had, and
-  will not let a scaled-up face run off the side.
-- **On a phone** the session takes the middle of the screen and the drawers
-  open downwards rather than sideways; the graph puts its plane on top and
-  the typing under it, where the keyboard will not cover it; the tube drops
-  who made the track and how far in it is to keep its row. Everything is
-  driven by touch — the cards are dragged by their heads, sized from their
-  corners, and the plane takes one finger to pan and two to pinch. The root
-  type is smaller here, and the controls measured from it shrank with it, so
-  the settings rows keep the same minimum a key on the island does: a switch
-  row was coming out 22px tall, half a fingertip.
+  allowed to stand larger than the room it is in, across as well as down:
+  one number scales the lot, so what fits is the smaller of the two ratios.
+  That ceiling holds whether or not a size was ever asked for, which is
+  what a phone turned on its side depends on. The face wants six hundred
+  points of height and is given three hundred and ninety, and with nothing
+  stored to apply, nothing used to be applied at all: it hung off both ends
+  of the window at once, the display above the top and EXE below the
+  bottom, and no scroll to reach either. The ceiling caps what is shown
+  without touching what was asked for, so a face sized on a tall window
+  comes back whole on the next one. Its corner has a strip of its own along
+  the foot, where it cannot take a press meant for EXE. A placed card grows
+  from its own top-left corner, so where it was put stays where it is. Like
+  a card's spot, its size is kept as a share of the viewport rather than a
+  pixel count.
+- **Upright on a phone the island is a bar along the foot**, and it stays
+  there. A thumb reaches the bottom of a six-inch screen and does not reach
+  the middle of one, so the only controls in the place live where they can
+  be pressed — and nothing moves when a card comes up, because there is
+  nowhere left for the island to move to. It is not dragged there and it
+  does not carry its groove: it is furniture rather than a thing standing
+  on a desk.
+
+  The bar puts the clock down its left at whatever height the keys come to,
+  and gathers the keys themselves into a block three columns wide down its
+  right — one row while a session runs, two with the toolbox out, three
+  while it is also paused. Left to wrap, the drawers ran on under the clock
+  instead and left the right-hand half of the bar empty; blocked, they
+  stack under the row they belong with, and the clock takes exactly the
+  height they came to — no padding and no label of its own, or it stood
+  half a key proud of the row beside it and made the bar taller than it
+  needed to be. Which leaves the figures alone in it, read at 35px rather
+  than 15px: the difference between finding the time and glancing at it.
+  The phase is no loss — the strip of light along the card's own foot
+  already carries it, in the colour of whichever block is running.
+
+  This is the one place the island's keys are a box of their own:
+  everywhere else the wrapper is `display: contents` and its three rows are
+  the island's own children, laid out as they always were.
+- **And a card there is not a window.** There is no room to float one in.
+  It is a sheet: it takes the screen from the top edge down to the bar. One
+  at a time, since two cannot share one anchor, so the toolbox row swaps
+  between them — that part is done in script, being a matter of what is
+  open rather than of how it is drawn. Nothing is dragged and nothing is
+  pulled about by a corner, so there is nothing to lose off the side of the
+  screen: a spot kept from a larger window is put away while the phone is
+  upright, and picked up again on the next screen with room to float
+  something in. The drawers open downwards here rather than sideways; the
+  graph puts its plane on top and the typing under it; the tube drops who
+  made the track and how far in it is to keep its row.
+
+  The keypad gets whatever the bar does not take. It is the tallest thing
+  here, and on a phone it fills its sheet rather than sitting at whatever
+  size it had on somebody's laptop. On an iPhone 16 that comes to a face
+  28% larger than before: keys 55×41 rather than 43×32, and the printing on
+  them 7.5px rather than 5.9px. Held sideways it goes the other way, down
+  to about three quarters, which is small — it is also the first time the
+  whole of it has been on the screen at once.
+- **A fingertip is 44px** whichever way the phone is being held, so every
+  key in the place keeps that much room: the page strip on the pad, the
+  three over the plane, the tube's own row, the settings rows — a switch
+  row was coming out 22px tall, half a fingertip. Every field keeps 16px,
+  which is the size below which iOS stops reading a field and starts
+  zooming the page into it, and there is no scroll here to come back with:
+  the notes pad was set at 12.6px and a graph line at 10.5px, so both left
+  the page magnified and off to one side on the first tap. The keypad is
+  the one exception to the 44px floor, and a deliberate one — that face is
+  a scale drawing of a real calculator, six columns by eight rows, and at
+  44px a key it would stand half again as tall as any phone. It is grown as
+  far as the screen allows and no further. A touch also behaves as a touch:
+  no grey box flashes behind the glass a moment after a tap, holding a key
+  down begins a drag rather than a selection or the system's own menu, and
+  a drag past an edge has nowhere to go rather than peeling the whole page
+  up off the glass and letting it snap back.
+- **The screen is smaller than the window.** A phone keeps a band around
+  the notch, a strip where the home indicator sits, and a margin either
+  side of the camera when it is held on its side. CSS is told their depths
+  and no script may ask for them — so a box is kept whose padding is
+  exactly those four, and its padding is read instead. What is laid out and
+  what is worked out then cannot disagree, and both follow the phone when
+  it is turned over. Every edge clears them: a card is centred on the
+  middle of what can be used rather than the middle of the window, which
+  are ten points apart on a phone held sideways, and a dragged card can no
+  longer be parked under the clock or the home indicator.
+- **The keyboard takes nothing off the window.** `100dvh` is the same
+  before and after one slides up, so a sheet laid out in the whole screen
+  carries on underneath it and the line being typed sits behind the keys.
+  What did change is how much of the window is still being shown, which the
+  visual viewport does report — so the depth of what came up is taken off
+  the foot of the sheet, and the sheet is the size of what can be seen. The
+  bar goes under the keyboard rather than riding above it: while you are
+  typing, the room is better spent on what you are typing into.
+- **Held sideways** a phone is as wide as a laptop and as tall as nothing.
+  The root type is sized off the width, so every rem in the place grew on
+  the one screen with no height to spare; there it is sized off the short
+  way instead. The island keeps its corner — width is the one thing there
+  is plenty of — and a card stays a window rather than becoming a sheet,
+  with the whole height to be scaled into.
 - **A card is measured again when it is shown.** Hidden, it has no size —
   and both the ceiling on a scaled face and the spot a placed one goes back
   to are worked out from that size, so while it was away they were worked

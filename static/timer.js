@@ -107,14 +107,33 @@ function reveal(node, on, ms = 400) {
                card left near an edge almost entirely off it. Laid out
                again, it can be measured again: reading a size back is what
                forces that layout, and the size comes before the spot,
-               since the spot is worked out from it. */
+               since the spot is worked out from it.
+
+               And the desk comes before either, on a phone: what is open
+               decides whether the island is an island or a bar, and how
+               tall that bar came to is what the room left for a card is
+               worked out from. */
+            desk();
             settled(node).classList.add('is-ready');
             sizers.forEach((fit) => fit());
             placers.forEach((put) => put());
         });
     } else {
         node.classList.remove('is-ready');
-        hiding.set(node, setTimeout(() => { node.hidden = true; hiding.delete(node); }, ms));
+
+        /* The timer goes down before the desk is told, and the order is
+           the whole of it: a card counts as shut by having one of these
+           pending, and the first thing done above was to clear the one it
+           had. Ask the desk in between and the card still reads as open —
+           so a desk putting a second sheet away asks it to close, is told
+           it is open, asks it to close, and does not come back. */
+        hiding.set(node, setTimeout(() => {
+            node.hidden = true;
+            hiding.delete(node);
+            desk(); /* and now the island has the screen back */
+        }, ms));
+
+        desk();
     }
 }
 
@@ -306,6 +325,66 @@ function showTools(on) {
     reveal(el.toolpanel, on, 400);
 }
 
+/* Upright, a phone is a different piece of furniture rather than a small
+   desk: the island lives along the foot and a card is the screen. Asked
+   for often and from early on — the first fit of a scaled face happens
+   before most of this file has run. */
+const phone = matchMedia('(max-width: 40rem)');
+
+/* Everything but the tube is placed by the layout there, so nothing but
+   the tube is dragged, and nothing but the tube keeps a spot. */
+const pinned = (node) => phone.matches && !node.classList.contains('music');
+
+/* ── What the screen keeps for itself ─────────────────────────
+   A phone keeps some of its own screen: the band around a notch, the
+   strip the home indicator sits in, the margins either side of a camera
+   when it is held on its side. CSS is told their depths through
+   `env(safe-area-inset-*)`, which no script is allowed to ask for — so a
+   box is kept whose padding is exactly those four, and its padding is
+   read instead. Measured rather than worked out, because they move: the
+   same phone turned over changes every one of them. */
+
+const edges = document.body.appendChild(document.createElement('div'));
+edges.className = 'edges';
+edges.setAttribute('aria-hidden', 'true');
+
+function safe() {
+    const box = getComputedStyle(edges);
+    return {
+        top: parseFloat(box.paddingTop) || 0,
+        right: parseFloat(box.paddingRight) || 0,
+        bottom: parseFloat(box.paddingBottom) || 0,
+        left: parseFloat(box.paddingLeft) || 0,
+    };
+}
+
+/* A keyboard takes no height off the window — `100dvh` is the same
+   before and after one slides up — so a card laid out in the whole
+   screen carries on underneath it, and the line being typed sits behind
+   the keys. What did change is how much of the window is still being
+   shown, which the visual viewport reports. The difference is the depth
+   of what came up over the top. */
+function covered() {
+    const seen = window.visualViewport;
+    return seen ? Math.max(0, innerHeight - seen.height - seen.offsetTop) : 0;
+}
+
+/* How tall a card may stand: the window, less the screen's own edges,
+   less whatever is standing along the foot. On a phone holding a sheet
+   up that is the bar the island shrank to — or the keyboard that has
+   come up over the bar, which is deeper and covers it. */
+function headroom() {
+    const edge = safe();
+    const bar = phone.matches ? el.hud.offsetHeight : 0;
+    return (innerHeight - edge.top - Math.max(covered(), edge.bottom + bar)) * 0.96;
+}
+
+/* And how wide, which on a phone is nearly always the tighter of the two */
+function sideroom() {
+    const edge = safe();
+    return (innerWidth - edge.left - edge.right) * 0.96;
+}
+
 /* ── Dragging a card ──────────────────────────────────────────
    The island and the calculator are moved the same way. Each keeps its
    spot as a fraction of the free space rather than a pixel offset, so an
@@ -321,30 +400,41 @@ function raise(node) { if (+node.style.zIndex !== front) node.style.zIndex = ++f
 
 function draggable(node, key, handle) {
     /* Travel available to the card, minus a margin so it never sits flush
-       against an edge. */
+       against an edge — and on a phone the edge is not the window's. A
+       card dropped in the top corner would go under the clock and the
+       camera, one in the bottom under the strip the home indicator keeps.
+       So the margin is the screen's own inset, plus the same slack again,
+       and it differs on all four sides. */
     const free = () => {
         const rect = node.getBoundingClientRect();
-        const gutter = Math.min(innerWidth, innerHeight) * 0.02;
+        const edge = safe();
+        const slack = Math.min(innerWidth, innerHeight) * 0.02;
+        const near = { x: edge.left + slack, y: edge.top + slack };
         return {
-            gutter,
-            x: Math.max(0, innerWidth - rect.width - gutter * 2),
-            y: Math.max(0, innerHeight - rect.height - gutter * 2),
+            near,
+            x: Math.max(0, innerWidth - rect.width - near.x - edge.right - slack),
+            y: Math.max(0, innerHeight - rect.height - near.y - edge.bottom - slack),
         };
     };
 
     const place = () => {
+        /* A spot kept from a larger window would only fight the bar and
+           the sheet for the same edges, so it is put away rather than
+           applied — and picked up again on the next screen with room to
+           float something in. */
+        if (pinned(node)) { node.classList.remove('is-placed'); return; }
         if (!prefs[key]) return;
         node.classList.add('is-placed'); /* set first: it can change the width */
         const room = free();
-        const at = (ratio, span, viewport) => `${((room.gutter + ratio * span) / viewport) * 100}%`;
-        node.style.setProperty('--x-pos', at(prefs[key].x, room.x, innerWidth));
-        node.style.setProperty('--y-pos', at(prefs[key].y, room.y, innerHeight));
+        const at = (ratio, span, from, viewport) => `${((from + ratio * span) / viewport) * 100}%`;
+        node.style.setProperty('--x-pos', at(prefs[key].x, room.x, room.near.x, innerWidth));
+        node.style.setProperty('--y-pos', at(prefs[key].y, room.y, room.near.y, innerHeight));
     };
 
     const placeAt = (x, y) => {
         const room = free();
-        const ratio = (value, span) => (span ? Math.min(1, Math.max(0, (value - room.gutter) / span)) : 0);
-        prefs[key] = { x: ratio(x, room.x), y: ratio(y, room.y) };
+        const ratio = (value, span, from) => (span ? Math.min(1, Math.max(0, (value - from) / span)) : 0);
+        prefs[key] = { x: ratio(x, room.x, room.near.x), y: ratio(y, room.y, room.near.y) };
         place();
     };
 
@@ -352,6 +442,12 @@ function draggable(node, key, handle) {
 
     node.addEventListener('pointerdown', (e) => {
         raise(node);
+        /* Nothing upright on a phone is dragged: the island is pinned to
+           the foot and the sheet fills what is left above it, so a drag
+           would move nothing and only write down a spot nothing reads.
+           The tube is the exception — it is a row, it floats, and it
+           still goes where it is put. */
+        if (pinned(node)) return;
         if (e.target.closest('button')) return; /* the controls come first */
         if (handle && !e.target.closest(handle)) return; /* and this one is picked up by its head */
         const rect = node.getBoundingClientRect();
@@ -407,22 +503,49 @@ function resizable(node, key, scaled) {
     const root = () => parseFloat(getComputedStyle(document.documentElement).fontSize);
 
     /* A scaled face is never scrolled, so it must never stand taller than
-       the screen: the corner that would shrink it again has to stay on
-       it. The ceiling is worked out from the card's own laid-out height,
-       which a transform leaves alone — and it caps what is shown without
-       touching what was asked for, so a face sized on a tall screen comes
-       back whole on the next one. */
-    const fits = () => (node.offsetHeight ? (innerHeight * 0.96) / node.offsetHeight : 2);
+       the room it is in: the corner that would shrink it again has to
+       stay on it. The ceiling is worked out from the card's own laid-out
+       height, which a transform leaves alone — and it caps what is shown
+       without touching what was asked for, so a face sized on a tall
+       screen comes back whole on the next one. */
+    /* One number scales the whole face, so what fits is the smaller of
+       what the room allows across and what it allows down. Only ever
+       asked of a card that is on the screen — see below. */
+    const fits = () => Math.min(headroom() / node.offsetHeight, sideroom() / node.offsetWidth);
 
     const apply = () => {
         const kept = prefs.sized?.[key];
-        if (!kept) return;
-        node.classList.add(scaled ? 'is-scaled' : 'is-sized');
-        if (scaled) node.style.setProperty('--zoom', Math.min(kept.zoom, fits()));
-        else {
-            node.style.setProperty('--w', `${(kept.w * 100).toFixed(3)}vw`);
-            node.style.setProperty('--h', `${(kept.h * 100).toFixed(3)}vh`);
+
+        /* A face nobody has ever resized has a ceiling too. Nothing was
+           stored for it, so nothing used to be applied at all — and on a
+           screen shorter than the face is tall that left it hanging off
+           both ends of the window at once, with the display above the top
+           and EXE below the bottom and no scroll to reach either. A phone
+           turned on its side is exactly that screen.
+
+           On a phone the face is not a window standing on the desk, it is
+           the sheet — and a sheet takes the room it is given rather than
+           whatever size it happened to have on somebody's laptop. So with
+           nothing asked for, what is applied there is the ceiling itself. */
+        if (scaled) {
+            /* Hidden, the face has no height, and nothing worth writing
+               down can be worked out from nothing. What it had already is
+               a better answer than one divided by zero — and it is asked
+               again the moment it is shown, which is what `reveal` lays
+               the card out for before it gets here. */
+            if (!node.offsetHeight) return;
+
+            const ceiling = fits();
+            const asked = kept?.zoom ?? (phone.matches ? ceiling : 1);
+            node.classList.add('is-scaled');
+            node.style.setProperty('--zoom', String(Math.min(asked, ceiling)));
+            return;
         }
+
+        if (!kept) return;
+        node.classList.add('is-sized');
+        node.style.setProperty('--w', `${(kept.w * 100).toFixed(3)}vw`);
+        node.style.setProperty('--h', `${(kept.h * 100).toFixed(3)}vh`);
     };
 
     let from = null;
@@ -479,6 +602,69 @@ function resizable(node, key, scaled) {
 /* Every study card, and the switch that closes it. A tool of its own
    file — the Graph — adds itself to this on the way in. */
 const cards = new Map([[el.calc, showCalc], [el.notes, showNotes]]);
+
+/* ── The desk, on a phone ─────────────────────────────────────
+   There is no room to float a window in on a six-inch screen, so a card
+   there is not one. It is a sheet: it takes the screen from the top edge
+   down to the island, which is standing along the foot whether or not
+   anything is out. Where a card sits is drawn in the stylesheet, and it
+   needs no help from here to know it.
+
+   What does need saying is that one anchor cannot hold two sheets.
+   Opening one puts the rest away — and a window merely dragged narrow
+   can arrive with several already out, in which case the one on top is
+   the one being worked in and the others go.
+
+   The tube is not a sheet. It is a single row, it is dragged, and it
+   floats over whatever is underneath as happily on a phone as anywhere
+   else. */
+
+const sheet = (node) => cards.has(node) && !node.classList.contains('music');
+
+function desk() {
+    const open = [...cards.keys()].filter((node) => sheet(node) && showing(node));
+    if (phone.matches && open.length > 1) {
+        open.sort((a, b) => (+b.style.zIndex || 0) - (+a.style.zIndex || 0))
+            .slice(1)
+            .forEach((node) => cards.get(node)(false));
+    }
+
+    /* How tall the bar came to, read straight back rather than left to the
+       observer below: a drawer opening and a sheet going up in the same
+       frame, and the sheet is laid out against the bar's new height. */
+    document.documentElement.style.setProperty('--bar', `${el.hud.offsetHeight}px`);
+}
+
+/* The sheet stands on the bar, so how tall the bar came to has to be a
+   number the sheet can be laid out against. It is one row, or two while
+   both drawers are out at once — measured rather than assumed, and every
+   scaled face re-fitted to what is left whenever it changes. */
+new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--bar', `${el.hud.offsetHeight}px`);
+    sizers.forEach((fit) => fit());
+}).observe(el.hud);
+
+/* Crossing the width where a card stops being a window and becomes a
+   sheet does not always come with a resize the listener below would hear,
+   so it is heard here as well. */
+phone.addEventListener('change', () => {
+    desk();
+    sizers.forEach((fit) => fit());
+    placers.forEach((put) => put());
+});
+
+/* A keyboard coming up or going down changes nothing about the window,
+   so nothing else here would hear about it. What it changes is how much
+   of the window is left to lay a sheet out in. */
+if (window.visualViewport) {
+    const shifted = () => {
+        document.documentElement.style.setProperty('--kb', `${Math.round(covered())}px`);
+        sizers.forEach((fit) => fit());
+    };
+    window.visualViewport.addEventListener('resize', shifted);
+    window.visualViewport.addEventListener('scroll', shifted);
+    shifted();
+}
 
 /* ── Modals ───────────────────────────────────────────────── */
 
@@ -2127,6 +2313,12 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('resize', () => {
     moveThumb();
+    /* The desk first, and for the same reason it comes first on the way in:
+       a phone turned on its side stops being a phone as far as the shape
+       queries are concerned, the island goes back to being an island, and
+       how much room a card has follows from both. Work a face's ceiling out
+       before that settles and it is worked out against the old screen. */
+    desk();
     sizers.forEach((fit) => fit()); /* a shorter window can cap a scaled face */
     placers.forEach((place) => place());
 });
