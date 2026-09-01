@@ -11,6 +11,8 @@ Beside the clock is a toolbox: an fx-82CW calculator, a graphing plane and
 a notes pad, with a player working four playlists of lofi. Everything is
 glass over the backdrop, and everything stays in the browser.
 
+This is a student project, and will be taken down by the creator by the end of October 2026.
+
 ## Run it
 
 ```bash
