@@ -855,6 +855,12 @@ function ink(curve) {
    where the curve is bending hard, and none at all where it is not. */
 const CLOSE = 0.25;
 const CUTS = 6;
+/* Halvings spent following a curve into a break. A pole needs six or
+   seven of them — the value doubles at each — and leaves early; what the
+   budget is really for is the slow ones, since ln takes about seventy to
+   get off the bottom of the plane, growing as it does by a constant with
+   every halving rather than by a factor. */
+const DIVE = 90;
 
 function sampled(curve) {
     const across = curve.kind === 'y';
@@ -877,6 +883,16 @@ function sampled(curve) {
     /* How far the middle reading strays from the line between its ends */
     const stray = (a, m, b) => Math.abs(m[0] - (a[0] + b[0]) / 2) + Math.abs(m[1] - (a[1] + b[1]) / 2);
 
+    /* Far enough past the edge that the stroke has plainly left the plane,
+       and no further: every halving past this one is spent drawing where
+       nobody is looking, and the slow blow-ups need all of them. */
+    const edge = across ? tall : wide;
+    const clear = edge / 4;
+    const gone = (at) => {
+        const v = across ? at[1] : at[0];
+        return v < -clear || v > edge + clear;
+    };
+
     let last = null;
     const put = (at) => {
         if (last) paper.lineTo(at[0], at[1]);
@@ -884,14 +900,57 @@ function sampled(curve) {
         last = at;
     };
 
+    /* ── Following a break in ─────────────────────────────────
+       A pole falls between two readings, and until now that step was
+       simply abandoned: the line stopped at the last whole pixel before
+       the break and picked up again at the first one after it. Where the
+       plane is zoomed in that costs nothing, since those two readings are
+       already off the screen — which is why it looked right. Zoomed out
+       it is the whole asymptote: 1/x at four pixels to the unit reads
+       −5.5 one pixel left of zero and +5.5 one pixel right of it, so the
+       curve was drawn as a flat line with a gap in the middle and no
+       upright limb at all.
+
+       So the step is followed rather than abandoned. Bisecting towards
+       the break from the side that still has a reading walks the curve up
+       to the asymptote a halving at a time, and it stops once the line
+       has plainly left the plane — six or seven steps for a pole, since
+       the value doubles each time. Where the curve merely stops instead,
+       as √x does at zero, there is nothing to run away to and the same
+       walk simply closes on the end, which draws it to its true edge
+       rather than to the last whole pixel. */
+
+    const toward = (pIn, at, pOut, keep) => {
+        let lo = pIn;
+        let hi = pOut;
+        for (let k = 0; k < DIVE && !gone(at); k++) {
+            const mid = (lo + hi) / 2;
+            const m = spot(mid);
+            if (m) { lo = mid; at = m; keep(m); } else hi = mid;
+        }
+    };
+
+    /* Into the break from the near side, drawing; and out of it on the far
+       side, which has to be gathered first and laid down backwards, since
+       a path is drawn away from where it starts and this one starts out
+       past the edge. */
+    const across_break = (pa, a, pb, b) => {
+        toward(pa, a, pb, put);
+        last = null;
+        const back = [];
+        toward(pb, b, pa, (m) => back.push(m));
+        for (let i = back.length - 1; i >= 0; i--) put(back[i]);
+        put(b);
+    };
+
     const walk = (pa, a, pb, b, left) => {
         const jump = across ? Math.abs(b[1] - a[1]) : Math.abs(b[0] - a[0]);
-        if (jump > over) { last = null; put(b); return; } /* a pole: a gap, not a stroke */
+        if (jump > over) { across_break(pa, a, pb, b); return; } /* a pole */
         if (!left) { put(b); return; }
 
         const pm = (pa + pb) / 2;
         const m = spot(pm);
-        if (!m) { last = null; put(b); return; } /* the curve stops inside the step */
+        if (!m) { across_break(pa, a, pb, b); return; } /* it stops inside the step */
         if (stray(a, m, b) < CLOSE) { put(b); return; }
 
         walk(pa, a, pm, m, left - 1);
@@ -900,12 +959,35 @@ function sampled(curve) {
 
     paper.beginPath();
     let prev = null;
+    let was = 0; /* where the last reading was */
+    let stopped = null; /* and where the run before this gap gave out */
+
     for (let p = 0; p <= span; p++) {
         const now = spot(p);
-        if (!now) { last = null; prev = null; continue; }
-        if (!prev) put(now);
-        else walk(p - 1, prev, p, now, CUTS);
+
+        /* Nothing here. Follow the last good reading in towards whatever
+           it ran into, then leave off. */
+        if (!now) {
+            if (prev) { toward(was, prev, p, put); last = null; }
+            if (prev || stopped === null) stopped = p;
+            prev = null;
+            continue;
+        }
+
+        if (prev) walk(was, prev, p, now, CUTS);
+        else if (stopped === null) put(now);
+        else {
+            /* First reading after a gap: come up out of it rather than
+               starting flat at a whole pixel. */
+            const back = [];
+            toward(p, now, stopped, (m) => back.push(m));
+            for (let i = back.length - 1; i >= 0; i--) put(back[i]);
+            put(now);
+        }
+
         prev = now;
+        was = p;
+        stopped = null;
     }
     paper.stroke();
 }
