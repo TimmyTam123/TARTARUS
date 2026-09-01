@@ -34,12 +34,25 @@ the repository — so every link is written relative to the page
 point is `index.html`. The audio is the thing to watch: 130 tracks come to
 about 215 MB of the 1 GB a Pages site is allowed.
 
+## Put it on a phone
+
+Open the page in Safari, tap the Share button in the toolbar, then **Add
+to Home Screen**. It opens as its own thing from there: no address bar and
+no toolbar, the backdrop carried right up under the clock, and the day's
+total and everything else already kept in that browser.
+
+Four tags in the head do that — the icon, `apple-mobile-web-app-capable`,
+a translucent status bar and the name under the icon. The translucent bar
+is the reason the page has to know the shape of the screen, since it puts
+the backdrop behind the clock and the camera rather than below them.
+
 ## Files
 
 ```
 index.html          the whole interface — home, session, focus mode, dialogs
 app.py              a dev server: hands back index.html and static/
 .nojekyll           tells GitHub Pages to serve the files as they are
+static/apple-touch-icon.png  the icon on a home screen (180 square)
 static/style.css    design tokens + every screen
 static/timer.js     session state, storage, settings, the calculator
 static/graph.js     the graphing plane and the parser behind it
